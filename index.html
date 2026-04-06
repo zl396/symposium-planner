@@ -67,6 +67,8 @@ a { color: var(--accent); }
 .card-actions .btn-remove { border-color: var(--red); color: var(--red); }
 .card-actions .btn-remove:hover { background: #fef2f2; }
 .card-actions .btn-abstract { border-color: var(--accent); color: var(--accent); }
+.card-actions .btn-zoom { border-color: #2563eb; color: #2563eb; }
+.card-actions .btn-zoom:hover { background: #eff6ff; }
 .conflict-warn { display: inline-flex; align-items: center; gap: .25rem; background: #fef3c7; color: var(--orange); padding: .15rem .5rem; border-radius: 12px; font-size: .72rem; font-weight: 600; margin-top: .35rem; }
 
 /* Day separator */
@@ -311,6 +313,39 @@ const DATA = [
 const mySchedule = new Set();
 let currentView = 'all'; // 'all' or 'schedule'
 
+// ==================== ZOOM LINKS ====================
+const ZOOM_LINKS = {
+  'Virtual (Zoom)': {
+    '2026-04-07': 'https://duke.zoom.us/j/94626550691',
+    '2026-04-08': 'https://duke.zoom.us/j/94626550691',
+    '2026-04-09': 'https://duke.zoom.us/j/94626550691'
+  },
+  'Field Auditorium, Grainger Hall': {
+    '2026-04-09': 'https://duke.zoom.us/s/99409484212',
+    '2026-04-10': 'https://duke.zoom.us/s/93596788269'
+  },
+  'Room 2102, Grainger Hall': {
+    '2026-04-09': 'https://duke.zoom.us/s/91825981725',
+    '2026-04-10': 'https://duke.zoom.us/s/97870555073'
+  },
+  'Room 2107, Grainger Hall': {
+    '2026-04-09': 'https://duke.zoom.us/s/94766292712',
+    '2026-04-10': 'https://duke.zoom.us/s/99137473639'
+  },
+  'Room 1101, Grainger Hall': {
+    '2026-04-09': 'https://duke.zoom.us/s/94772416186',
+    '2026-04-10': 'https://duke.zoom.us/s/99702106324'
+  },
+  'Room A158, LSRC': {
+    '2026-04-09': 'https://duke.zoom.us/s/95981506841'
+  }
+};
+
+function getZoomLink(item) {
+  const loc = ZOOM_LINKS[item.location];
+  return loc ? (loc[item.date] || '') : '';
+}
+
 // ==================== PROGRAM COLORS ====================
 const PROGRAM_COLORS = {
   'DEL':'#7c3aed','EE':'#2563eb','EAM':'#0891b2','BE':'#059669','CEEJ':'#d97706',
@@ -538,6 +573,15 @@ function createCard(item, conflicts) {
     actions.appendChild(btnAbs);
   }
 
+  const zoom = getZoomLink(item);
+  if (zoom) {
+    const btnZoom = document.createElement('button');
+    btnZoom.className = 'btn-zoom';
+    btnZoom.textContent = 'Join Zoom';
+    btnZoom.addEventListener('click', () => { window.open(zoom, '_blank', 'noopener,noreferrer'); });
+    actions.appendChild(btnZoom);
+  }
+
   card.appendChild(actions);
   return card;
 }
@@ -595,12 +639,12 @@ function exportCsv() {
   items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
   const escCsv = v => '"' + String(v).replace(/"/g, '""') + '"';
-  const rows = [['Date','Time','Location','Presenters','Program','Title','Advisors','Abstract URL'].join(',')];
+  const rows = [['Date','Time','Location','Presenters','Program','Title','Advisors','Abstract URL','Zoom Link'].join(',')];
   items.forEach(d => {
     rows.push([
       escCsv(DAY_NAMES[d.date] || d.date), escCsv(d.time), escCsv(d.location),
       escCsv(d.presenters), escCsv(d.program), escCsv(d.title),
-      escCsv(d.advisors), escCsv(d.abstract)
+      escCsv(d.advisors), escCsv(d.abstract), escCsv(getZoomLink(d))
     ].join(','));
   });
 
