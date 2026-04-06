@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duke Nicholas School — Spring Symposium 2026 Schedule Planner</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f6fa; --card: #fff; --text: #1a1a2e; --muted: #6b7280;
+  --accent: #003366; --accent-light: #e8eef6; --border: #e2e5ea;
+  --green: #059669; --red: #dc2626; --orange: #d97706;
+  --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+a { color: var(--accent); }
+
+/* Header */
+.header { background: var(--accent); color: #fff; padding: 1.25rem 1.5rem; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 1.25rem; font-weight: 600; }
+.header p { font-size: .85rem; opacity: .8; margin-top: .2rem; }
+
+/* Layout */
+.container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+.toolbar { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.toolbar .btn { padding: .45rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; font-size: .85rem; transition: .15s; }
+.toolbar .btn:hover { background: var(--accent-light); }
+.toolbar .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.toolbar .btn-export { background: var(--green); color: #fff; border-color: var(--green); }
+.toolbar .btn-export:hover { opacity: .9; }
+
+/* Filters */
+.filters { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.filters h3 { font-size: .9rem; margin-bottom: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.filter-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.filter-group { display: flex; flex-direction: column; gap: .3rem; min-width: 180px; flex: 1; }
+.filter-group label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.filter-group select, .filter-group input { padding: .4rem .6rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: .85rem; background: #fff; }
+.filter-group select:focus, .filter-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,51,102,.15); }
+.filter-tags { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
+.filter-tag { display: inline-flex; align-items: center; gap: .3rem; background: var(--accent-light); color: var(--accent); padding: .2rem .6rem; border-radius: 20px; font-size: .78rem; }
+.filter-tag button { background: none; border: none; cursor: pointer; font-size: .9rem; color: var(--accent); line-height: 1; }
+.clear-all { font-size: .8rem; color: var(--red); cursor: pointer; background: none; border: none; text-decoration: underline; }
+
+/* Stats bar */
+.stats { font-size: .85rem; color: var(--muted); margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: center; }
+
+/* Cards */
+.cards { display: flex; flex-direction: column; gap: .6rem; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1.1rem; box-shadow: var(--shadow); transition: .15s; position: relative; }
+.card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.card.in-schedule { border-left: 4px solid var(--green); }
+.card.has-conflict { border-left: 4px solid var(--orange); }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
+.card-meta { display: flex; gap: .6rem; flex-wrap: wrap; font-size: .78rem; color: var(--muted); margin-top: .35rem; }
+.card-meta span { display: inline-flex; align-items: center; gap: .2rem; }
+.card-title { font-size: .95rem; font-weight: 600; margin-top: .4rem; }
+.card-presenters { font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+.card-advisor { font-size: .82rem; margin-top: .2rem; }
+.card-advisor strong { color: var(--muted); }
+.program-badge { display: inline-block; padding: .1rem .5rem; border-radius: 12px; font-size: .72rem; font-weight: 600; color: #fff; }
+.card-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+.card-actions button { padding: .3rem .7rem; border-radius: var(--radius); font-size: .78rem; cursor: pointer; border: 1px solid var(--border); background: var(--card); transition: .15s; }
+.card-actions button:hover { background: var(--accent-light); }
+.card-actions .btn-add { border-color: var(--green); color: var(--green); }
+.card-actions .btn-add:hover { background: #ecfdf5; }
+.card-actions .btn-remove { border-color: var(--red); color: var(--red); }
+.card-actions .btn-remove:hover { background: #fef2f2; }
+.card-actions .btn-abstract { border-color: var(--accent); color: var(--accent); }
+.conflict-warn { display: inline-flex; align-items: center; gap: .25rem; background: #fef3c7; color: var(--orange); padding: .15rem .5rem; border-radius: 12px; font-size: .72rem; font-weight: 600; margin-top: .35rem; }
+
+/* Day separator */
+.day-separator { background: var(--accent); color: #fff; padding: .5rem 1rem; border-radius: var(--radius); font-weight: 600; font-size: .9rem; margin-top: .5rem; }
+
+/* Empty state */
+.empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty p { font-size: 1.1rem; }
+
+/* Print */
+@media print {
+  .header, .filters, .toolbar, .card-actions, .stats { display: none !important; }
+  .container { max-width: 100%; padding: 0; }
+  .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; margin-bottom: .5rem; }
+  .day-separator { background: #333 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .program-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body::before { content: "Duke Nicholas School — Spring Symposium 2026"; display: block; font-size: 1.2rem; font-weight: bold; text-align: center; margin: 1rem 0; }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .filter-row { flex-direction: column; }
+  .filter-group { min-width: 100%; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Duke Nicholas School — Spring Symposium 2026</h1>
+  <p>April 7–10, 2026 &middot; Interactive Schedule Planner</p>
+</div>
+
+<div class="container">
+  <div class="toolbar">
+    <button class="btn active" id="btnAll">All Sessions</button>
+    <button class="btn" id="btnSchedule">My Schedule (<span id="scheduleCount">0</span>)</button>
+    <button class="btn btn-export" id="btnExportCsv">Export CSV</button>
+    <button class="btn btn-export" id="btnPrint">Print</button>
+  </div>
+
+  <div class="filters">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>Filters</h3>
+      <button class="clear-all" id="btnClearFilters">Clear all filters</button>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Date</label>
+        <select id="filterDate"><option value="">All Dates</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Time Slot</label>
+        <select id="filterTime"><option value="">All Time Slots</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Location</label>
+        <select id="filterLocation"><option value="">All Locations</option></select>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Program</label>
+        <select id="filterProgram"><option value="">All Programs</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Advisor</label>
+        <select id="filterAdvisor"><option value="">All Advisors</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Keyword Search</label>
+        <input type="text" id="filterKeyword" placeholder="Title, presenter, or keyword...">
+      </div>
+    </div>
+    <div class="filter-tags" id="filterTags"></div>
+  </div>
+
+  <div class="stats">
+    <span id="resultCount"></span>
+  </div>
+
+  <div class="cards" id="cardContainer"></div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const DATA = [
+  // TUESDAY APRIL 7 — DEL Virtual
+  {id:1,date:"2026-04-07",time:"7:30 PM",location:"Virtual (Zoom)",presenters:"Natalie Ip",program:"DEL",title:"Can Culturally Relevant Narratives Motivate Climate Change Related Public Policy Reforms and Community Action in Hong Kong?",advisors:"Kerry Ossi-Lupo",abstract:"https://duke.box.com/s/lfjuhbk015j4yrdtvz102y7hrq1whqp7"},
+  {id:2,date:"2026-04-07",time:"7:55 PM",location:"Virtual (Zoom)",presenters:"Mike Franke-Rose",program:"DEL",title:"Enhancing U.S.C.G. Maritime Domain Awareness Through Geospatial Intelligence Dashboards",advisors:"Peter Cada",abstract:"https://duke.box.com/s/4rrrsap2h1dsjtp2xrbegey1yom1ooqe"},
+  {id:3,date:"2026-04-07",time:"8:20 PM",location:"Virtual (Zoom)",presenters:"Sangeeta Upadhyay",program:"DEL",title:"AI's Hidden Demand — \"Where AI Meets the Grid\"",advisors:"Dave Johnston",abstract:"https://duke.box.com/s/8zi6hvlae3wn0iyl2nsmqf5icqjadktp"},
+  {id:4,date:"2026-04-07",time:"8:45 PM",location:"Virtual (Zoom)",presenters:"Jason Lapidus, Juan Diego Aguilar",program:"DEL",title:"Organizational Sustainability: A Resilience Framework for Startups",advisors:"Dave Johnston",abstract:"https://duke.box.com/s/h6ymx98pljbshrhdtyqdjsqsamemlyyw"},
+  {id:5,date:"2026-04-07",time:"9:05 PM",location:"Virtual (Zoom)",presenters:"Michael Durante",program:"DEL",title:"Photocatalytic Solutions for Decarbonizing & Depolluting Value Chain Emissions from the Roadway Microenvironment",advisors:"Dave Johnston, Peter Cada",abstract:"https://duke.box.com/s/9wbk721jscyf7bvwv6fmh3i6woa9g7hj"},
+
+  // WEDNESDAY APRIL 8 — DEL Virtual
+  {id:6,date:"2026-04-08",time:"7:30 PM",location:"Virtual (Zoom)",presenters:"Didra Felix, Liz Sarno, Ky Mundy",program:"DEL, TFE-CEEJ",title:"Bridging the Gap: Mobilizing Investment for Community Resilience in High Point, NC",advisors:"Victoria Salinas",abstract:"https://duke.box.com/s/q0dsvj3l8cq7v8ngwuod38qznywrymn9"},
+  {id:7,date:"2026-04-08",time:"7:55 PM",location:"Virtual (Zoom)",presenters:"Annemarie Carignan",program:"DEL",title:"Nature at Work: CEI's Habitat and Species Playbook",advisors:"Jim Toomey",abstract:"https://duke.box.com/s/84e8m1ew2i7zzbor2y3yym9ta9sfkh7t"},
+  {id:8,date:"2026-04-08",time:"8:20 PM",location:"Virtual (Zoom)",presenters:"Bonnie Angermeier",program:"DEL",title:"Flexible Interconnection: A Policy Solution to Meet U.S. Energy and Climate Needs",advisors:"Brian Murray",abstract:"https://duke.box.com/s/92th9x21rturqzf5i3hm9z9ux5on67i5"},
+
+  // THURSDAY APRIL 9 — DEL Virtual (Evening)
+  {id:9,date:"2026-04-09",time:"7:30 PM",location:"Virtual (Zoom)",presenters:"Hannah Wagner",program:"DEL",title:"Ripples of Resilience: Weaving Disaster Risk Reduction into the Flow of Global Nature Conservation through an examination of WWF's Recharge Pakistan",advisors:"Brian McAdoo",abstract:"https://duke.box.com/s/kofau76fjkw3u17j0xqr7zhh8w8u3sd8"},
+  {id:10,date:"2026-04-09",time:"7:55 PM",location:"Virtual (Zoom)",presenters:"Robert Hughes",program:"DEL",title:"Investigating Historic Industrial Operations as PFAS Sources in New Jersey Drinking Water",advisors:"Heather Stapleton",abstract:"https://duke.box.com/s/z04j3nu7phfalhbrxcngze7wprp76m27"},
+  {id:11,date:"2026-04-09",time:"8:20 PM",location:"Virtual (Zoom)",presenters:"Mark Williams",program:"DEL",title:"\"A Healthy and Connected Landscape\": A Strategic Vision for The Cumberland Forest, Its Community Fund, and the Outdoor Recreation Economy They Support",advisors:"Richard Mei",abstract:"https://duke.box.com/s/x83oqjhurc88w7lccyob4fr7cq8bgtes"},
+
+  // THURSDAY APRIL 9 — Field Auditorium, Grainger Hall
+  {id:12,date:"2026-04-09",time:"9:05 AM",location:"Field Auditorium, Grainger Hall",presenters:"Clara Haxhi, Jeffery Lopez",program:"EE-EEP, EE-EAM",title:"Evaluating the Effectiveness of Ten Years of Renewable Energy Siting Guidance in Colorado",advisors:"Dalia Patino-Echeverri",abstract:"https://duke.box.com/s/95q94msfd8sk3mm75rctb3l5mzwio4gq"},
+  {id:13,date:"2026-04-09",time:"9:30 AM",location:"Field Auditorium, Grainger Hall",presenters:"Ananya Aggarwal, Arthur Smith",program:"EE-CEEJ, EE-BE",title:"Defining Ecovoltaics: A Systematic Review and Framework for Ecologically Integrated Solar Development",advisors:"Dalia Patino-Echeverri",abstract:"https://duke.box.com/s/2ctidjj6vssdc0alg93zbwfu2yyujavn"},
+  {id:14,date:"2026-04-09",time:"9:55 AM",location:"Field Auditorium, Grainger Hall",presenters:"Jessalyn Chuang",program:"EE-EAM",title:"Who Gets Left in the Dark? A Data-Driven Study of Power Outage Patterns in North Carolina",advisors:"Dalia Patino-Echeverri",abstract:"https://duke.box.com/s/upskzx54r812kn5xrxy7pnnodc7wwihl"},
+  {id:15,date:"2026-04-09",time:"10:20 AM",location:"Field Auditorium, Grainger Hall",presenters:"Yeeun Kim, Lauren Shohan, Yuan Yuan, Lucas Zhou",program:"EE-EAM, EE-BE",title:"Broadband Grid Modernization: A Cost and Technology Landscape Comparison of Distribution-Level Monitoring",advisors:"Jackson Ewing",abstract:"https://duke.box.com/s/2lux6gsspfkdy89l34trtdkgu5y8h3lw"},
+  {id:16,date:"2026-04-09",time:"10:45 AM",location:"Field Auditorium, Grainger Hall",presenters:"Trudy Jiang, Chih-Chieh Mao, Zhaoxin Zhang",program:"EE-BE, BE-EE, EE-EAM",title:"What Can Be Learned from US States and Chinese Provinces about Energy Transitions?",advisors:"Jackson Ewing",abstract:"https://duke.box.com/s/cvi5h1t58ynhv0a1c1jjv0j0njspjr3w"},
+  {id:17,date:"2026-04-09",time:"11:10 AM",location:"Field Auditorium, Grainger Hall",presenters:"Sadie Tetreault",program:"EE-EEP/MBA",title:"Data Dashboard: Asia-Pacific Trade Exposure to the European Carbon Border Adjustment Mechanism",advisors:"Jackson Ewing",abstract:"https://duke.box.com/s/sz0ljpuaxk40zljkr55s9vpq9s9p8of1"},
+  {id:18,date:"2026-04-09",time:"1:00 PM",location:"Field Auditorium, Grainger Hall",presenters:"Aditi Jackson, David Robinson",program:"EE-EAM/MBA",title:"Unlocking Capital for Energy Storage: A Scenario-Based Analysis of BESS Degradation on Project Economics in ERCOT",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/y307ckryc5tk8qftxoo3awfk9c7vwy6x"},
+  {id:19,date:"2026-04-09",time:"1:25 PM",location:"Field Auditorium, Grainger Hall",presenters:"Sumit Dalsania",program:"EE-EEP/MBA",title:"Bridging the Operational Gap: An Organizational Design for Commercial-Scale Enhanced Geothermal Systems",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/mgwlq5c28rdrlss54tz797xzjjjwfg6k"},
+  {id:20,date:"2026-04-09",time:"1:50 PM",location:"Field Auditorium, Grainger Hall",presenters:"Mara Michel, Amber Wright",program:"EAM-EE/MBA, EE-CEEJ/MBA",title:"100% Great Lakes Fish",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/n48phovowy3iw55j3ayjeysjmm6zb4wy"},
+  {id:21,date:"2026-04-09",time:"2:15 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jonathan Joyner",program:"EE-EAM/MBA",title:"Alternative Electrochemical Extraction Opportunities of Non-precious Metals",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/umtvqjqbkcg8ajfvjt3jkx8eps45epgb"},
+  {id:22,date:"2026-04-09",time:"2:40 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jingze Dai, Skyler Ju, Kiran Kruse, Joy Wu",program:"EE-EAM, BE-EE, EE-BE, EE-EAM",title:"Integrating Battery Energy Storage Systems (BESS) into Data Centers: Technical, Economic, and Market Analysis",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/xp9gw3bqlr9nr8qai7rzz9lm6sz127de"},
+  {id:23,date:"2026-04-09",time:"3:30 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jingni Pang, Anli Raymond, Serena Zheng",program:"EE-BE, EEP-BE, BE-EE",title:"A Comprehensive Guide to Implement a Mobility Hub for Multifamily Households in Palo Alto, CA to Reduce Vehicles Miles Traveled and Greenhouse Gas Emissions",advisors:"Tim Johnson",abstract:"https://duke.box.com/s/6fo44qxdwjl0ty9l8b9ohw3kso5urzaj"},
+  {id:24,date:"2026-04-09",time:"3:55 PM",location:"Field Auditorium, Grainger Hall",presenters:"Samantha Sedar",program:"EE-EAM/MBA",title:"A Case Study in Climate Hardware Financing: Navigating Early Commercialization in Power Electronics",advisors:"Dalia Patino-Echeverri",abstract:"https://duke.box.com/s/jpgl5ia5x4ta0w92pa3cs0us5qzxzp4b"},
+  {id:25,date:"2026-04-09",time:"4:20 PM",location:"Field Auditorium, Grainger Hall",presenters:"Julia Kagiliery",program:"EE-EAM",title:"Power Outages and Social Vulnerability: Quantifying Social and Environmental Contributors to Power Outages Across North Carolina",advisors:"Brian McAdoo",abstract:"https://duke.box.com/s/ljwc3fl6j0pvh8lif1uy7dw31l2hxw12"},
+  {id:26,date:"2026-04-09",time:"4:45 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jack Killeen",program:"EE-EAM/MBA",title:"The Economics of Fusion Energy: From Demonstration to Market Viability",advisors:"Luana Lima",abstract:"https://duke.box.com/s/3dzw8iaoq87vbrsu9f8b4maqnmrw14cb"},
+
+  // THURSDAY APRIL 9 — Room 2102, Grainger Hall
+  {id:27,date:"2026-04-09",time:"9:05 AM",location:"Room 2102, Grainger Hall",presenters:"MacEva Wright",program:"CaMS-CEEJ",title:"Bridging Science and Storytelling: Strengthening Educator Engagement in Coastal Resilience Education",advisors:"Rebecca Vidra",abstract:"https://duke.box.com/s/xoup99xdsstndgfdngi1j1q4y1pwdcow"},
+  {id:28,date:"2026-04-09",time:"9:30 AM",location:"Room 2102, Grainger Hall",presenters:"Nicolas Davalos",program:"CaMS-BE",title:"Designing High-Integrity Environmental Performance Indicators for Sovereign Blue Finance: A Case Study for Fiji",advisors:"Elizabeth Losos, Richard Mei",abstract:"https://duke.box.com/s/99i4lagmdftyt6tjaj2fj3my9pn3zghe"},
+  {id:29,date:"2026-04-09",time:"9:55 AM",location:"Room 2102, Grainger Hall",presenters:"Audrey Kuptz",program:"CaMS-EEP",title:"Assessing Effectiveness of Global Preferential Access Areas for Small-Scale Fishers",advisors:"John Virdin, Tibor Vegh",abstract:"https://duke.box.com/s/ikbz0p8hk4pb1o6v9accul9fuexvao4h"},
+  {id:30,date:"2026-04-09",time:"10:20 AM",location:"Room 2102, Grainger Hall",presenters:"Camber Vincent",program:"CaMS-EAM",title:"Spatial Tradeoffs and Prioritization for Ocean Alkalinity Enhancement Deployment",advisors:"John Virdin, Nico Cassar, Pat Halpin",abstract:"https://duke.box.com/s/p4qqits3p1m0pnx8cyn6fxeaaytxo7qk"},
+  {id:31,date:"2026-04-09",time:"10:45 AM",location:"Room 2102, Grainger Hall",presenters:"Evan Mularo",program:"CaMS-BE",title:"AUVs and AI: Automating Data Collection and Imagery Analysis to Inform Offshore Energy Planning",advisors:"Pat Halpin",abstract:"https://duke.box.com/s/9qhc51ojkw5x2aor5hdi1cz96qxrmzon"},
+  {id:32,date:"2026-04-09",time:"11:10 AM",location:"Room 2102, Grainger Hall",presenters:"Andrew Barfield",program:"CaMS-EAM",title:"Trick or Treet: Analyzing Drivers of Local Ghost Forest Formation Along the Coastal Plain of North Carolina",advisors:"Ryan Emanuel, Pat Halpin",abstract:"https://duke.box.com/s/h45yqibgk0optsyzz3fesrgk64i2o8tm"},
+  {id:33,date:"2026-04-09",time:"1:00 PM",location:"Room 2102, Grainger Hall",presenters:"Kendall Fitzgerald",program:"CaMS-EAM",title:"Assessing Marine Mammal Species Distribution Model Usage & Future Modeling Considerations in the United States Northwest Atlantic",advisors:"Pat Halpin",abstract:"https://duke.box.com/s/mc692d3teu3ayqnke5xkgegiqbdqj3b6"},
+  {id:34,date:"2026-04-09",time:"1:25 PM",location:"Room 2102, Grainger Hall",presenters:"Natalie Holsclaw",program:"CaMS-EAM",title:"Evaluating the Taxonomic Scope of Tuna Regional Fisheries Management Organizations to Identify Management Gaps and Spatial Priorities in the High Seas",advisors:"Pat Halpin, Guillermo Ortuno Crespo",abstract:"https://duke.box.com/s/95r70elwoto9roge81baougkpq2gpr90"},
+  {id:35,date:"2026-04-09",time:"1:50 PM",location:"Room 2102, Grainger Hall",presenters:"Priya Rathod",program:"CaMS-EAM",title:"Challenges and Opportunities for Baleen Whale Conservation in the High Seas – A Case Study of Blue Whales in the Thermal Dome",advisors:"Pat Halpin, Guillermo Ortuno Crespo",abstract:"https://duke.box.com/s/y3914hxh8q6dqn8yioooixzew7kko58u"},
+  {id:36,date:"2026-04-09",time:"2:15 PM",location:"Room 2102, Grainger Hall",presenters:"Meredith Langmuir",program:"CaMS-BE",title:"Preliminary Marine Spatial Planning to Support Potential Aquaculture Development in the U.S. Caribbean Islands",advisors:"Pat Halpin, James Morris",abstract:"https://duke.box.com/s/j88b3gwufbtvnb4mjfytvgb3whf6hxu0"},
+  {id:37,date:"2026-04-09",time:"2:40 PM",location:"Room 2102, Grainger Hall",presenters:"Amelia McDonald",program:"CaMS-CEEJ",title:"Preliminary Marine Spatial Planning for Future Aquaculture Development in the State of Hawaii",advisors:"Pat Halpin",abstract:"https://duke.box.com/s/qvj9ri5etvq9g9nnwl7ja0esg9sip0zz"},
+  {id:38,date:"2026-04-09",time:"3:30 PM",location:"Room 2102, Grainger Hall",presenters:"Sameer Swarup",program:"CaMS-EAM",title:"Predicting Land Cover Change in the Chesapeake Bay Using 30-Meter Resolution Spatiotemporal Data",advisors:"Pat Halpin",abstract:"https://duke.box.com/s/aobimeei8cioeor3g5ei838uxfzh9wqz"},
+  {id:39,date:"2026-04-09",time:"3:55 PM",location:"Room 2102, Grainger Hall",presenters:"Ayden Schirmacher",program:"CaMS-EAM",title:"Effects of Ice Floe Area and Density on Harbor Seal (Phoca vitulina) Haul-Out Behavior in Glacier Bay National Park, Alaska",advisors:"Dave Johnston",abstract:"https://duke.box.com/s/4qsbz55kzy38xiy5f4dfda7511x4cy97"},
+  {id:40,date:"2026-04-09",time:"4:20 PM",location:"Room 2102, Grainger Hall",presenters:"Eileen Jennings",program:"CaMS-CEEJ",title:"Climate Fiction for Climate Change",advisors:"Shineng Hu, Jodi Psoter",abstract:"https://duke.box.com/s/09b1vlciqmgowuec3i1x07ba9jljqe4o"},
+
+  // THURSDAY APRIL 9 — Room 2107, Grainger Hall
+  {id:41,date:"2026-04-09",time:"9:05 AM",location:"Room 2107, Grainger Hall",presenters:"Ky Mundy",program:"TFE-CEEJ",title:"Bridging the Gap: Mobilizing Investment for Community Resilience in High Point, NC",advisors:"Lydia Olander, Victoria Salinas",abstract:"https://duke.box.com/s/q0dsvj3l8cq7v8ngwuod38qznywrymn9"},
+  {id:42,date:"2026-04-09",time:"9:30 AM",location:"Room 2107, Grainger Hall",presenters:"Emily Yang",program:"TFE-EAM",title:"LiDAR-Based Drainage Ditch Mapping for Peatland Restoration Across Low-Relief Coastal Landscapes in North Carolina",advisors:"Katie Warnell, John Fay",abstract:"https://duke.box.com/s/bg2wpho1jogzoazfkoezcu2tmr2k87c8"},
+  {id:43,date:"2026-04-09",time:"9:55 AM",location:"Room 2107, Grainger Hall",presenters:"Shaochong Xue",program:"TFE-EAM",title:"Quantifying the Ecological Impact of Baited Bird Blinds on Local Habitats: A Case Study from China",advisors:"Nicki Cagle",abstract:"https://duke.box.com/s/1ut70lw3ef6zrck4audxf8yiwojzo7wo"},
+  {id:44,date:"2026-04-09",time:"10:20 AM",location:"Room 2107, Grainger Hall",presenters:"Kabryn Mattison",program:"TFE-CEEJ",title:"Sacred Nature: The Conservation Status of Herpetofauna in Nusa Penida, Indonesia",advisors:"Nicki Cagle",abstract:"https://duke.box.com/s/16ipa9xsqkep1kh58udcx59ed6swlsf9"},
+  {id:45,date:"2026-04-09",time:"10:45 AM",location:"Room 2107, Grainger Hall",presenters:"Sujay Dhanagare",program:"TFE-EAM",title:"Flood Resilience Through Water Infrastructure: Identifying Opportunities for an Early Stage Investor",advisors:"Lydia Olander, Elizabeth Losos",abstract:"https://duke.box.com/s/tgrt29hyeca6ru7jj4y22w2t8oovxrvb"},
+  {id:46,date:"2026-04-09",time:"11:10 AM",location:"Room 2107, Grainger Hall",presenters:"Jonathan Gilman",program:"TFE-EAM",title:"Browning or Clearing: Does Recovery of Acidification Consistently Alter Dissolved Organic Carbon Exports from Small Watersheds?",advisors:"Emily Bernhardt",abstract:"https://duke.box.com/s/prmb85fm7vubmh1dn2lohpkjwhyatp8r"},
+  {id:47,date:"2026-04-09",time:"1:00 PM",location:"Room 2107, Grainger Hall",presenters:"Gretchen Barbera",program:"TFE-CEEJ",title:"Hydrologic Risk and Combined Sewer System Stress: Prioritizing Green Infrastructure for Flood Resilience in Pittsburgh, PA",advisors:"Jim Heffernan",abstract:"https://duke.box.com/s/al4ra62uuymefr657v6x2y6ub2ij0ckr"},
+  {id:48,date:"2026-04-09",time:"1:25 PM",location:"Room 2107, Grainger Hall",presenters:"Summer Heschong, Ruijie Yang",program:"TFE-EAM, TFE-EEP",title:"Vegetation Management Plan for Moores Creek National Battlefield",advisors:"Rebecca Vidra",abstract:"https://duke.box.com/s/icmls3ooerz9erd705vg77dxzcetak4y"},
+  {id:49,date:"2026-04-09",time:"1:50 PM",location:"Room 2107, Grainger Hall",presenters:"Iman Byndloss, Jeremy Sabol, Rachel Williams",program:"TFE-EAM, EEP-CaMS, TFE-EAM",title:"State Wildlife Action Plans: Assessing Plans for Recovery Effectiveness",advisors:"Dean Urban",abstract:"https://duke.box.com/s/kftlvbzkpjozhbaep3rfvoecd9klym6t"},
+  {id:50,date:"2026-04-09",time:"2:15 PM",location:"Room 2107, Grainger Hall",presenters:"Rosanne Yang",program:"TFE-EEP",title:"A Study of Deforestation and Human Land-Use Activities in Alaotra-Mangoro, Madagascar",advisors:"Tong Qiu",abstract:"https://duke.box.com/s/9p7g2f4zvxix91f47ncndmv4r4d4emsr"},
+  {id:51,date:"2026-04-09",time:"2:40 PM",location:"Room 2107, Grainger Hall",presenters:"Shivani Lakshman",program:"EEP-TFE",title:"Comparing U.S. and International Strategies to Address Agricultural Nonpoint Source Pollution",advisors:"Martin Doyle",abstract:"https://duke.box.com/s/eo54lylaom5nbmnj7nouqne8scaws0ly"},
+  {id:52,date:"2026-04-09",time:"3:30 PM",location:"Room 2107, Grainger Hall",presenters:"Zhenghao Lin, Weilin Wang, Rosie Wu, Janice Ye",program:"EE-EAM/MPP, EAM-EE, EE-EAM, BE-EE/MPP",title:"The Impact of Rate Structures, Incentives, and Financing Mechanisms on the Financial Viability of Residential Solar and Battery Systems: A Five-State Case Study",advisors:"Luana Lima",abstract:"https://duke.box.com/s/n51dmaqztbo1bz2c17lzgytx6ca4a19k"},
+  {id:53,date:"2026-04-09",time:"3:55 PM",location:"Room 2107, Grainger Hall",presenters:"Nicole Gutkowski",program:"TFE-EAM",title:"Optimizing Interpolation Methods for National-Scale PFAS Mapping",advisors:"Luana Lima, Peter Cada",abstract:"https://duke.box.com/s/vm2b1namu9bv12hdvtxt8p0qu7d8fdcf"},
+  {id:54,date:"2026-04-09",time:"4:20 PM",location:"Room 2107, Grainger Hall",presenters:"Simon Heinberg",program:"EAM-TFE/MPP",title:"Evaluating Minnesota's Fall Fertilizer Application Restriction: Effects on Waterway Nitrate Pollution",advisors:"Ryan Emanuel",abstract:"https://duke.box.com/s/j9vr4pdv0viqmc2ujbtekdpucqbar4cp"},
+
+  // THURSDAY APRIL 9 — Room 1101, Grainger Hall
+  {id:55,date:"2026-04-09",time:"9:05 AM",location:"Room 1101, Grainger Hall",presenters:"Junyu Wang, Zijie Wang",program:"iMEP",title:"From Stage to Strategy: How Major Auto Shows Interpret China's Auto Industry Transition (2013-2025)",advisors:"Jingbo Cui",abstract:"https://duke.box.com/s/vy8mlkg354szxgqdcimkt7kxv3xa262p"},
+  {id:56,date:"2026-04-09",time:"9:30 AM",location:"Room 1101, Grainger Hall",presenters:"Jiayue Lyu, Xinxue Wang, Shiyi Zheng",program:"iMEP",title:"Policy Iteration and Patent Technology Evolution for Power Battery Recycling of Electric Vehicles in China (2015–2025)",advisors:"Jingbo Cui",abstract:"https://duke.box.com/s/q5ef1wqjevd4yquffauiy42cnea2e3c5"},
+  {id:57,date:"2026-04-09",time:"9:55 AM",location:"Room 1101, Grainger Hall",presenters:"Wenqiang Yang, Siyuan Fang, Andrea Lu",program:"iMEP",title:"Mapping Solar Technology Development in China: A Policy and Patent Analysis",advisors:"Jingbo Cui",abstract:"https://duke.box.com/s/cr8c9i5nxdgzcpw5nbey2xd212fh9vjm"},
+  {id:58,date:"2026-04-09",time:"10:20 AM",location:"Room 1101, Grainger Hall",presenters:"Yinuo Yang",program:"iMEP",title:"Tide-Driven Soil Respiration: Impacts of Tidally-Induced Water Table",advisors:"Chuanhui Gu",abstract:"https://duke.box.com/s/0lfeweljxsonhqi5m937yagoi463rynf"},
+  {id:59,date:"2026-04-09",time:"10:45 AM",location:"Room 1101, Grainger Hall",presenters:"Lindsay Bell, Malaika Martis",program:"EEP-TFE, EE-EEP",title:"Integrating Environmental Justice into Hydrogen Energy Transitions: Community-Based Analysis and Engagement in the SH2INE Project",advisors:"Noelle Wyman Roth",abstract:"https://duke.box.com/s/vj574k8qkvv11nwazggbri4lanucx60i"},
+  {id:60,date:"2026-04-09",time:"11:10 AM",location:"Room 1101, Grainger Hall",presenters:"Asreeta Ushasri",program:"EE-EAM",title:"Monitoring and Evaluation Strategies for Environmental Education Programs in Zambia",advisors:"Noelle Wyman Roth",abstract:"https://duke.box.com/s/2ck4h5hsy3113idlp03drezwsbgi9c1c"},
+  {id:61,date:"2026-04-09",time:"1:00 PM",location:"Room 1101, Grainger Hall",presenters:"Rachael Stephan",program:"EAM-EEH",title:"Forecasting Primary Productivity and Tuna Fishery Biomass in the North Pacific Subtropical Gyre with Machine Learning",advisors:"Nicolas Cassar, Zuchuan Li",abstract:"https://duke.box.com/s/c2tc13x5o2h8sv2s2p9aq8u2lq41k7od"},
+  {id:62,date:"2026-04-09",time:"1:25 PM",location:"Room 1101, Grainger Hall",presenters:"Brock Keller",program:"EEH-EAM",title:"Impacts of Glyphosate, AMPA, and Cadmium Co-exposures on Kidney Function in Larval Zebrafish using a Transgenic Proteinuria Reporter",advisors:"Nishad Jayasundara",abstract:"https://duke.box.com/s/p9v137qyrgiar3ufazlo0ey7qqs36bxz"},
+  {id:63,date:"2026-04-09",time:"1:50 PM",location:"Room 1101, Grainger Hall",presenters:"Patricia Kwiatek",program:"EEH-CEEJ",title:"The Relative Exposure to PFAS from Well Water for Firefighters in North Carolina",advisors:"Lee Ferguson",abstract:"https://duke.box.com/s/rsm744kiktcobywwya6b8rzthg9ndhy9"},
+  {id:64,date:"2026-04-09",time:"2:15 PM",location:"Room 1101, Grainger Hall",presenters:"Anna Clauer",program:"EEH-CEEJ",title:"A Participatory Approach Towards Reporting and Mitigating Air Pollution and Heat in Durham, NC",advisors:"Anais Roque, Danielle Wagner, Mike Bergin",abstract:"https://duke.box.com/s/i661i4337zw1e445rdn26il0fglmbigv"},
+  {id:65,date:"2026-04-09",time:"2:40 PM",location:"Room 1101, Grainger Hall",presenters:"Emily Burghart",program:"TFE-CEEJ",title:"Community Approaches to Sustainable Infrastructure Placement for Small-Scale Wool Producers in North Carolina",advisors:"Anais Roque",abstract:"https://duke.box.com/s/tx3qedxqgeu71sxodm6cqrhy7q7dz9ju"},
+  {id:66,date:"2026-04-09",time:"3:30 PM",location:"Room 1101, Grainger Hall",presenters:"Fiona Price",program:"TFE-CEEJ",title:"Land Management in Madagascar: Balancing Forest Protection and Local Livelihoods",advisors:"Anais Roque",abstract:"https://duke.box.com/s/2okedyxwe6zgljrmytgzq0hq54j1mebe"},
+  {id:67,date:"2026-04-09",time:"3:55 PM",location:"Room 1101, Grainger Hall",presenters:"Ariel Kimberley",program:"CEEJ-TFE",title:"Reducing Lead Ammunition Exposure: Educational Outreach and Harm Reduction Strategies for the Coharie Tribe and Indigenous Communities in North Carolina",advisors:"Ryan Emanuel",abstract:"https://duke.box.com/s/0qxkfp8oieg8mq2epioct2ctenk521g7"},
+
+  // THURSDAY APRIL 9 — Room A158, LSRC
+  {id:68,date:"2026-04-09",time:"9:30 AM",location:"Room A158, LSRC",presenters:"Tessa Nyhan",program:"BIO-GWD",title:"GWD Presentation",advisors:"Juliet Wong",abstract:""},
+  {id:69,date:"2026-04-09",time:"9:55 AM",location:"Room A158, LSRC",presenters:"Dhruv Rungta",program:"GWD",title:"GWD Presentation",advisors:"Chris Sims",abstract:""},
+  {id:70,date:"2026-04-09",time:"10:20 AM",location:"Room A158, LSRC",presenters:"Chibuike Okafor",program:"ENV-GWD",title:"Isotopic Analysis of Tree Water and Surface Water from Ghost Forests in Coastal North Carolina",advisors:"Ryan Emanuel",abstract:"https://duke.box.com/s/gr4eyydyzfdt1d8vi8im1guexa1xhcim"},
+  {id:71,date:"2026-04-09",time:"10:45 AM",location:"Room A158, LSRC",presenters:"Gabrielle Moreau",program:"ENV-GWD",title:"\"Stewards of Our Own Destiny\": How Tribal Nations Pursue Self-Determination through Oil and Gas Development",advisors:"Ryan Emanuel",abstract:"https://duke.box.com/s/jamrgww5la7zrfu0k01q3wwtduo1at10"},
+  {id:72,date:"2026-04-09",time:"11:10 AM",location:"Room A158, LSRC",presenters:"Ella Tallett",program:"ENV-GWD",title:"A Two-Way Fixed Effects Framework to Estimate the Impacts of Urbanization, Vegetation, and Aerosols on Air Temperature in North Carolina",advisors:"David Carlson",abstract:"https://duke.box.com/s/55cdjuqjjg34avwx1flnzsjkyuycjk7s"},
+  {id:73,date:"2026-04-09",time:"1:00 PM",location:"Room A158, LSRC",presenters:"Jean Chung",program:"ENV-GWD",title:"Investigating Genetic Susceptibility to Ozone Exposure",advisors:"Robert Tighe",abstract:"https://duke.box.com/s/aacwe2ddw0jkqztijee6hzn486yilexq"},
+  {id:74,date:"2026-04-09",time:"1:25 PM",location:"Room A158, LSRC",presenters:"Joshua Goozman",program:"ENV-GWD",title:"Ghost Forest Forensics: What Drives Variation in Soil Carbon Emissions in Coastal Forested Wetlands?",advisors:"Emily Bernhardt",abstract:"https://duke.box.com/s/qrytkby4nh6kqmajlr6xh3ejkbsuo5zq"},
+  {id:75,date:"2026-04-09",time:"1:50 PM",location:"Room A158, LSRC",presenters:"Sarah Kuhlman",program:"ENV-GWD",title:"Assessing Toxicological Impacts of Chronic Exposure to Low Density and High Density Polyethylene Nanoplastics",advisors:"Jason Somarelli",abstract:"https://duke.box.com/s/584411cfztqbfd1z6lq544x4swlwvzx4"},
+  {id:76,date:"2026-04-09",time:"2:15 PM",location:"Room A158, LSRC",presenters:"Chloe Young",program:"ENV-GWD",title:"Investigating the Validity and Utility of Anticipatory Insurance for Oyster Aquaculture in North Carolina",advisors:"Brian McAdoo",abstract:"https://duke.box.com/s/lo0z2vcrb8hapb7vjgzkurotmioiyld9"},
+  {id:77,date:"2026-04-09",time:"2:40 PM",location:"Room A158, LSRC",presenters:"Ella Weinstein",program:"ENV-GWD",title:"Assessing the Environmental, Social, Economic, and Political Barriers to Mining in Greenland",advisors:"Jackson Ewing",abstract:"https://duke.box.com/s/nmvqz7pzfoc5g8wysuial08nmbm6nzjv"},
+  {id:78,date:"2026-04-09",time:"3:30 PM",location:"Room A158, LSRC",presenters:"Abby Walden",program:"ENV-GWD",title:"Increasing Microbial Activity and Nitrogen Availability Into the Deeper Soil-Rooting Zone on the Duke Campus Farm Through 15 years of Regenerative Agriculture",advisors:"Dan Richter",abstract:"https://duke.box.com/s/pcldb144gfmfl18l2y3syhj06g3x5t60"},
+  {id:79,date:"2026-04-09",time:"3:55 PM",location:"Room A158, LSRC",presenters:"Michael Kiel",program:"ENV-GWD",title:"Neurobehavioral Effects of Embryonic Exposure to Lead and Benzo[a]pyrene in Zebrafish Models",advisors:"Edward Levin",abstract:"https://duke.box.com/s/hvew26swz429x3ofzq14h1b1j9h2b1ud"},
+
+  // FRIDAY APRIL 10 — Field Auditorium, Grainger Hall
+  {id:80,date:"2026-04-10",time:"9:05 AM",location:"Field Auditorium, Grainger Hall",presenters:"Manjiri Deshmukh, Hazal Maral, Terry Uranbold, Daniel Whitehead, Judy Zhu",program:"EEP-EE, EE-EAM, BE-EE",title:"Advancing a Framework for Grid Reliability Incentives in Low- and Middle-Income African Countries",advisors:"Jonathan Philips, Alix Peterson Zwane",abstract:"https://duke.box.com/s/g7u4oybvjcw27u39qo9ul89e120rade5"},
+  {id:81,date:"2026-04-10",time:"9:30 AM",location:"Field Auditorium, Grainger Hall",presenters:"Kimberly Ludeña Acevedo",program:"BE-EE/MBA",title:"State Applications of Responsible Sourcing Frameworks: Banco Central del Ecuador's ASGM Purchasing Program",advisors:"Alex Pfaff",abstract:"https://duke.box.com/s/fpw3n5quam1pxea57bj05zbeuqll7auf"},
+  {id:82,date:"2026-04-10",time:"9:55 AM",location:"Field Auditorium, Grainger Hall",presenters:"Nicholas Sommer",program:"BE-EE/MBA",title:"Burying the Problem – Partnerships Pathways & Development Strategies for CO2 Mineralization in U.S. Markets Amidst Regulatory Uncertainty",advisors:"Holly Emerson",abstract:"https://duke.box.com/s/9cirrrm57w2a2oivlvwc8lbsx1g2bjy4"},
+  {id:83,date:"2026-04-10",time:"10:20 AM",location:"Field Auditorium, Grainger Hall",presenters:"Hanna Rush",program:"BE-TFE/MBA",title:"Sustainable Sourcing of Edible Oils in a Changing Climate: Risk Assessment, Corporate Benchmarking, and Strategic Recommendations for U.S. Food Companies",advisors:"Holly Emerson",abstract:"https://duke.box.com/s/lexpx6vaqdaa2bsaf1st9r15r2e67ids"},
+  {id:84,date:"2026-04-10",time:"10:45 AM",location:"Field Auditorium, Grainger Hall",presenters:"Sriya Gottumukkula, Lalie Marie, Daichen Shi",program:"BE-TFE, BE-EE, EE-EEP",title:"Setting SBTi-Aligned Targets for Motion Industries",advisors:"Holly Emerson",abstract:"https://duke.box.com/s/2nwvxmgxfep1cyfgk25652rgkvbcqz1b"},
+  {id:85,date:"2026-04-10",time:"11:10 AM",location:"Field Auditorium, Grainger Hall",presenters:"Adiya Jumagaliyeva",program:"BE-EE",title:"From Baseline to Future Scenarios: Evaluating GridSeer Technology and Avoided Emissions at Duke University",advisors:"Holly Emerson, Mauricio Hernandez",abstract:"https://duke.box.com/s/2ajbbc79bgj9d5oauir8hdq60x9s3l2p"},
+  {id:86,date:"2026-04-10",time:"11:35 AM",location:"Field Auditorium, Grainger Hall",presenters:"Jeffrey Chu, Lauren Xu, Nicole Yaw",program:"EE-EEP, BE-EE",title:"Scope 3 Upstream Emission Factor (EF) Analysis & Computation for Product Carbon Footprinting (PCF)",advisors:"Holly Emerson, Shannon Parker",abstract:"https://duke.box.com/s/q53jxi1ck8pf9kmjuo3uz6amaqytddug"},
+  {id:87,date:"2026-04-10",time:"1:00 PM",location:"Field Auditorium, Grainger Hall",presenters:"Peyton Fitts, Shraddha Sharma, Wonder Wei, Olivia Wuttke",program:"BE-TFE, BE-EE",title:"Phase 2: Assessment of Sustainable Procurement Alternatives for Duke Student Affairs",advisors:"Shannon Parker",abstract:"https://duke.box.com/s/a2wey9qgbnehueyntzge7f9cduv31gxw"},
+  {id:88,date:"2026-04-10",time:"1:25 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jessica Stubbs",program:"TFE-BE",title:"Crossing the Translation Gap: Positioning Academic Innovation for the Business World",advisors:"Shannon Parker, Jesko von Windheim",abstract:"https://duke.box.com/s/dint5okx0c1udwlzzn3taz3h8musa25l"},
+  {id:89,date:"2026-04-10",time:"1:50 PM",location:"Field Auditorium, Grainger Hall",presenters:"Haonan Pei, Aisha Shen, Shiyu Zhu",program:"EE-EEP, EE-BE",title:"Strategic Energy Planning for Enfield, NC: Reducing Energy Costs and Enabling an Affordable Transition Beyond 2027",advisors:"Jesko von Windheim",abstract:"https://duke.box.com/s/uivfnf1ojl165lm089b97vck4rthfcgc"},
+  {id:90,date:"2026-04-10",time:"2:15 PM",location:"Field Auditorium, Grainger Hall",presenters:"Ryan Sidawi",program:"BE-EE/MBA",title:"Energy Market Structure and the Limits of LNG as a Tool of Geopolitical Coercion",advisors:"Jesko von Windheim",abstract:"https://duke.box.com/s/qgrsueepdjq3h8ihbpzcziuy1nlwtp3u"},
+  {id:91,date:"2026-04-10",time:"2:40 PM",location:"Field Auditorium, Grainger Hall",presenters:"Jacqueline Wittich",program:"EAM-TFE/MBA",title:"Assessing Heat Stress Tolerance of Native and Exotic Urban Planted Tree Species Under Future Climate Scenarios in New York City",advisors:"Luana Lima",abstract:"https://duke.box.com/s/4a3qa0i6s4vrdo3rni9erbv9qv27g36n"},
+
+  // FRIDAY APRIL 10 — Room 2102, Grainger Hall
+  {id:92,date:"2026-04-10",time:"9:05 AM",location:"Room 2102, Grainger Hall",presenters:"Rebecca Cox",program:"CaMS-EAM",title:"In the Belly of the Beast: A Cell Culture Model to Study the Impacts of Plastic Additives on Stress in Marine Mammals",advisors:"Jason Somarelli, Tom Schultz",abstract:"https://duke.box.com/s/e9xrszf9k4pdmph9jhp3o2rkjy53xttt"},
+  {id:93,date:"2026-04-10",time:"9:30 AM",location:"Room 2102, Grainger Hall",presenters:"Ryan Meshanko",program:"CaMS-BE",title:"Rack n' Roll: Assessing the effects of acute and chronic mechanical agitation on farmed eastern oysters (Crassostrea virginica)",advisors:"Tom Schultz",abstract:"https://duke.box.com/s/jacuqjl0jq7iiub6arvem6wbhu016u3o"},
+  {id:94,date:"2026-04-10",time:"9:55 AM",location:"Room 2102, Grainger Hall",presenters:"Kelly Gallagher",program:"CaMS-EEP",title:"Light Pollution, Human Activity, and Sea Turtle Nesting at Cape Lookout National Seashore, North Carolina",advisors:"Grant Murray, Dave Johnston",abstract:"https://duke.box.com/s/vxqi9ehb6e9immnylzu9e0nmpeztrw7m"},
+  {id:95,date:"2026-04-10",time:"10:20 AM",location:"Room 2102, Grainger Hall",presenters:"Alice Daeschler",program:"CaMS-CEEJ",title:"The Role of Markets and Socio-economic Factors in Shaping the North Carolina Aquaculture Industry",advisors:"Grant Murray",abstract:"https://duke.box.com/s/dia2g2ecvbigicmk9caie0n78pgy2dl5"},
+  {id:96,date:"2026-04-10",time:"10:45 AM",location:"Room 2102, Grainger Hall",presenters:"Elizabeth Kroger",program:"CaMS-CEEJ",title:"Piloting a Fisheries Data Collection Method and Scoping a Sourcing Strategy for a Sustainable Seafood Startup in Sonora, Mexico",advisors:"Grant Murray",abstract:"https://duke.box.com/s/gv4hrlw088xbxtzmmqp1hr16sx17eyri"},
+  {id:97,date:"2026-04-10",time:"11:10 AM",location:"Room 2102, Grainger Hall",presenters:"Diandre' Richie",program:"CaMS-EEP",title:"Evaluating Long-Term Resilience: A Case Study Analysis of the North Carolina Resilient Coastal Community Program",advisors:"Grant Murray",abstract:"https://duke.box.com/s/hivhh1qi2l0e5g7rr63ip3cw8jb3i06v"},
+  {id:98,date:"2026-04-10",time:"11:35 AM",location:"Room 2102, Grainger Hall",presenters:"Cole Roxbury",program:"CaMS-BE",title:"ESG Benchmarking of US-Origin Aquaculture Companies Using the Seafood Stewardship Index",advisors:"Grant Murray",abstract:"https://duke.box.com/s/v3bpgwiphxs2cyq39vo1ygcovbueqspv"},
+  {id:99,date:"2026-04-10",time:"1:00 PM",location:"Room 2102, Grainger Hall",presenters:"Maryam Krauss",program:"CaMS-CEEJ",title:"Fishermen's Perceptions of Harbor Seals in the Outer Banks, North Carolina",advisors:"Andy Read",abstract:"https://duke.box.com/s/wtzy6lpzaq1zlpjwdhpn8b24xemayl84"},
+  {id:100,date:"2026-04-10",time:"1:25 PM",location:"Room 2102, Grainger Hall",presenters:"Tori Newton",program:"CaMS-CEEJ",title:"Evaluating the Effectiveness of Northeast Gear Marking Scheme for Aerial Detection of Large Whale Entanglements: Implications for North Atlantic Right Whale Conservation",advisors:"Andy Read",abstract:"https://duke.box.com/s/h1fa5wj2zavqnmmy3mamck6bj0hie3cw"},
+  {id:101,date:"2026-04-10",time:"1:50 PM",location:"Room 2102, Grainger Hall",presenters:"Kayla Emerson",program:"CaMS-EAM",title:"Remote Sensing Based Modeling of Salt Marsh Stability Under Sea Level Rise",advisors:"Brad Murray",abstract:"https://duke.box.com/s/p8xd9ny0kzgtijflodsg6dnbfbpts36h"},
+  {id:102,date:"2026-04-10",time:"2:15 PM",location:"Room 2102, Grainger Hall",presenters:"Samantha Jensen",program:"CaMS-EAM",title:"Framework for Evaluating Coastal Vulnerability to Guide Wavebreaker Stakeholder Engagement",advisors:"Brad Murray",abstract:"https://duke.box.com/s/fldd07hu3fa0sro7ga4ygi29i2tbgd7k"},
+  {id:103,date:"2026-04-10",time:"2:40 PM",location:"Room 2102, Grainger Hall",presenters:"Megan Dear",program:"CaMS-CEEJ",title:"Situating the Global Coral Reef Monitoring Network in Coral Reef Governance",advisors:"Lisa Campbell, Emily Melvin",abstract:"https://duke.box.com/s/ned817pqt3ks5p8yipctgo3l7l0j5b7c"},
+  {id:104,date:"2026-04-10",time:"3:30 PM",location:"Room 2102, Grainger Hall",presenters:"Mason Ibrahim",program:"CaMS-EAM",title:"Oh Shoot! Lessons Learned from Gelatin Adhesive Attachment of Eelgrass Seeds to Clams",advisors:"Brian Silliman",abstract:"https://duke.box.com/s/t598arwvwszss6iylm7k7q1bemp9p6rt"},
+  {id:105,date:"2026-04-10",time:"3:55 PM",location:"Room 2102, Grainger Hall",presenters:"Graham Gaither",program:"CaMS-EEP",title:"Transmission Loss of Fin Whale Vocalizations in the North Atlantic: Ground Truthing a Mathematically Derived Transmission Loss Mode",advisors:"Doug Nowacek",abstract:"https://duke.box.com/s/p02bewzqfk0fdisxk11vzanide069ky2"},
+
+  // FRIDAY APRIL 10 — Room 2107, Grainger Hall
+  {id:106,date:"2026-04-10",time:"9:30 AM",location:"Room 2107, Grainger Hall",presenters:"Cammie Moore, Jaclyn Narleski, Vedaansh Uberoi",program:"TFE-EAM, EEH-EAM, EEP-TFE",title:"Replicate and Expand Ongoing Research on WOTUS Over Time: An Examination of Potential Impacts on Wetlands/Streams Over Different Definitions of Waters of the United States (WOTUS)",advisors:"Betsy Albright",abstract:"https://duke.box.com/s/ege904rgxh8rey43nqvhtn2j2am3hamz"},
+  {id:107,date:"2026-04-10",time:"9:55 AM",location:"Room 2107, Grainger Hall",presenters:"Beatrix Liu, Scout Yokley",program:"CEEJ-EEH, EEP-CaMS",title:"Identifying and Communicating Health Risks from Subsistence Fish Consumption along the Lower Cape Fear River",advisors:"Liz Shapiro-Garza",abstract:"https://duke.box.com/s/1ttzhsig7183gdyx3csi5j6u9yuao06u"},
+  {id:108,date:"2026-04-10",time:"10:20 AM",location:"Room 2107, Grainger Hall",presenters:"Diana Bachiller, Hannah Naehring",program:"TFE-CEEJ/MF, TFE-EEP",title:"Participatory Biodiversity Monitoring and Biological Corridor Planning with Indigenous Communities in Oaxaca, Mexico",advisors:"Nicki Cagle, Liz Shapiro-Garza",abstract:"https://duke.box.com/s/j2bhxe9jhzsp8cc3puaxnaaj1s86kik4"},
+  {id:109,date:"2026-04-10",time:"10:45 AM",location:"Room 2107, Grainger Hall",presenters:"Jake Frietze",program:"GWD",title:"GWD Presentation",advisors:"Meagan Dunphy-Daly",abstract:""},
+  {id:110,date:"2026-04-10",time:"11:10 AM",location:"Room 2107, Grainger Hall",presenters:"Hannah Baetge",program:"MARSCI-GWD",title:"Altered Lipid Metabolism Pathways Enable Hypoxia Tolerance in Goose-Beaked Whales",advisors:"Jason Somarelli",abstract:"https://duke.box.com/s/ajf31vfi1kkrmfd8vjy6pdwwnsx44ky2"},
+  {id:111,date:"2026-04-10",time:"11:35 AM",location:"Room 2107, Grainger Hall",presenters:"Kira Lichtenfeld",program:"MARSCI-GWD",title:"Predicting Future Distribution of Tamanend's Bottlenose Dolphins (Tursiops erebennus) Based on Thermal Tolerance and Prey Shifts",advisors:"Andy Read",abstract:"https://duke.box.com/s/9jhd1nxgvlt31y2yuxwv5aae2nk8w2ha"},
+  {id:112,date:"2026-04-10",time:"1:00 PM",location:"Room 2107, Grainger Hall",presenters:"Ruth Havener",program:"MARSCI-GWD",title:"Using the Sea Urchin Lytechinus variegatus to Mitigate Biofouling in Oyster Aquaculture",advisors:"Juliet Wong",abstract:"https://duke.box.com/s/uegyhb1kgq2x3tf93q3bnij2w71n4wgb"},
+  {id:113,date:"2026-04-10",time:"1:25 PM",location:"Room 2107, Grainger Hall",presenters:"Jane Curry",program:"MARSCI-GWD",title:"Investigating Larval Eastern Oyster (Crassostrea virginica) Mortality and Sublethal Responses to Acute Heat Stress",advisors:"Juliet Wong",abstract:"https://duke.box.com/s/khvg1m7ghnk9jqsmk61swlg0hg8cbadz"},
+  {id:114,date:"2026-04-10",time:"1:50 PM",location:"Room 2107, Grainger Hall",presenters:"Thomas Tan",program:"MARSCI-GWD",title:"Temperature and Symbiotic Status Drive Rates of Sediment Removal by the Temperate Coral, Astrangia poculata",advisors:"Brian Silliman",abstract:"https://duke.box.com/s/4a1nms3xme1qbr4hg8pc5p7z5vtm5o63"},
+  {id:115,date:"2026-04-10",time:"2:15 PM",location:"Room 2107, Grainger Hall",presenters:"Lizzy Glazer",program:"MARSCI-GWD",title:"Disturbing the Sanctuary: Anthropogenic Noise Disrupts Humpback Whale (Megaptera novaeangliae) Song and Alters Dive Behavior",advisors:"Meagan Dunphy-Daly",abstract:"https://duke.box.com/s/4xa30q0mcj8ylfj1w8mglpnvzuz7o4t3"},
+
+  // FRIDAY APRIL 10 — Room 1101, Grainger Hall
+  {id:116,date:"2026-04-10",time:"9:05 AM",location:"Room 1101, Grainger Hall",presenters:"Judy Song",program:"iMEP",title:"Mangrove Restoration in Zhanjiang: Impact on Small-Scale Fisheries and Aquaculture from a Socioeconomic Lens",advisors:"Wumeng He, Binbin Li",abstract:"https://duke.box.com/s/3njibip33y1dblrtuv8jrb56tjjl2vp0"},
+  {id:117,date:"2026-04-10",time:"9:30 AM",location:"Room 1101, Grainger Hall",presenters:"Shuyi Shen",program:"iMEP",title:"Walking as Biocultural Action: Infrastructure(s) of hope at the China's Miao Borderland",advisors:"Robin Rodd, Wumeng He",abstract:"https://duke.box.com/s/4b783s4dw01sv3i8w2auzw2ves4dp5hm"},
+  {id:118,date:"2026-04-10",time:"9:55 AM",location:"Room 1101, Grainger Hall",presenters:"Juanying Huangfu",program:"iMEP",title:"Natural and Cultural Capital Dynamics: A Theoretical Framework and Empirical Evidence on Cultural Landscape Formation",advisors:"Wumeng He",abstract:"https://duke.box.com/s/zw1ee5g2nb9kpvwsh2gjbbr691v4e1cv"},
+  {id:119,date:"2026-04-10",time:"10:20 AM",location:"Room 1101, Grainger Hall",presenters:"Jiahao Zhang",program:"iMEP",title:"From Birth to Death Among the Trees: Life-Cycle Rituals and Forest Governance among the Yi People",advisors:"Wumeng He",abstract:"https://duke.box.com/s/tddgk4w2oejgj17zyyxi1383lbdeb88n"},
+  {id:120,date:"2026-04-10",time:"10:45 AM",location:"Room 1101, Grainger Hall",presenters:"Xinran Yin",program:"iMEP",title:"Co-variation Between Global Sea Surface Temperature and MODIS Ocean Color (2002–2025): A Time-Series Regression Analysis",advisors:"Zuchuan Li",abstract:"https://duke.box.com/s/bv3oxw7j7x0p0r8gwf4yoft04p1lofoz"},
+  {id:121,date:"2026-04-10",time:"11:10 AM",location:"Room 1101, Grainger Hall",presenters:"Yueyang Ma, Shi Feng",program:"iMEP",title:"Opportunities and Challenges in the Current Aquaculture Practices on Waterbirds, from Local Fish Farmers' Perspective – Taking Coastal Jiangsu as an Example",advisors:"Jimmy Choi",abstract:"https://duke.box.com/s/ih13ari41b6dxm88bmcjaexd5i7wvthj"},
+  {id:122,date:"2026-04-10",time:"11:35 AM",location:"Room 1101, Grainger Hall",presenters:"Shihao Fu",program:"iMEP",title:"MP Presentation",advisors:"Jingbo Cui",abstract:""},
+  {id:123,date:"2026-04-10",time:"1:00 PM",location:"Room 1101, Grainger Hall",presenters:"Yangsen Zhang, Yiting He, He Gao",program:"iMEP",title:"The Impact of Carbon Market Expansion on Steel Enterprises: A Case Study in Changzhou",advisors:"Junjie Zhang",abstract:"https://duke.box.com/s/hzbbhfst6b0h4egfy19unk4g7ox9ykjn"},
+  {id:124,date:"2026-04-10",time:"1:25 PM",location:"Room 1101, Grainger Hall",presenters:"Tianyue Wei, Cong Qiao",program:"iMEP",title:"MP Presentation",advisors:"Junjie Zhang",abstract:""},
+  {id:125,date:"2026-04-10",time:"1:50 PM",location:"Room 1101, Grainger Hall",presenters:"Erchi Luo, Yihao Yu, Haochuan Zhan",program:"iMEP",title:"Tech-EVA: A Technology-Adjusted Valuation Model for the Solar Photovoltaic Industry",advisors:"Junjie Zhang",abstract:"https://duke.box.com/s/ls8j2n8ckuntt23cesufag80nm0gb4l7"},
+  {id:126,date:"2026-04-10",time:"2:15 PM",location:"Room 1101, Grainger Hall",presenters:"Han Zhang",program:"iMEP",title:"Environmental Conflict, Citizen Perceptions, and Digital Narrative Dynamics: An LLM-assisted NLP Study of Lithium Mining Protests in Serbia",advisors:"Andrew Cheon, Jiahua Yue",abstract:"https://duke.box.com/s/c1hx71esb4tello8tnr6i40wbwwriyzk"},
+  {id:127,date:"2026-04-10",time:"2:40 PM",location:"Room 1101, Grainger Hall",presenters:"Bochao Zhang",program:"iMEP",title:"From Extraction to Equity: Institutional Learning and Justice in China's Resource-for-Infrastructure Deals",advisors:"Andrew Cheon",abstract:"https://duke.box.com/s/54ip0gtw457r190dkaxgklpsnenkgr8b"}
+];
+
+// ==================== APP STATE ====================
+const mySchedule = new Set();
+let currentView = 'all'; // 'all' or 'schedule'
+
+// ==================== PROGRAM COLORS ====================
+const PROGRAM_COLORS = {
+  'DEL':'#7c3aed','EE':'#2563eb','EAM':'#0891b2','BE':'#059669','CEEJ':'#d97706',
+  'EEP':'#dc2626','EEH':'#be185d','CaMS':'#0369a1','TFE':'#15803d','iMEP':'#9333ea',
+  'GWD':'#64748b','MARSCI':'#0e7490','MBA':'#b45309','MF':'#166534','MPP':'#7e22ce',
+  'BIO':'#475569','ENV':'#4b5563'
+};
+
+function getProgramColor(prog) {
+  const p = prog.split(/[-,\/]/)[0].trim();
+  return PROGRAM_COLORS[p] || '#6b7280';
+}
+
+// ==================== TIME HELPERS ====================
+const DAY_NAMES = {'2026-04-07':'Tue, Apr 7','2026-04-08':'Wed, Apr 8','2026-04-09':'Thu, Apr 9','2026-04-10':'Fri, Apr 10'};
+
+function parseTime(t) {
+  const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return 0;
+  let h = parseInt(m[1]); const min = parseInt(m[2]); const ap = m[3].toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function getTimePeriod(t) {
+  const mins = parseTime(t);
+  if (mins < 720) return 'morning';
+  if (mins < 1020) return 'afternoon';
+  return 'evening';
+}
+
+function sortKey(item) {
+  return item.date + '-' + String(parseTime(item.time)).padStart(4,'0');
+}
+
+// ==================== POPULATE FILTERS ====================
+function populateFilters() {
+  const dates = [...new Set(DATA.map(d => d.date))].sort();
+  const locations = [...new Set(DATA.map(d => d.location))].sort();
+  const timeSlots = [...new Set(DATA.map(d => d.time))].sort((a, b) => parseTime(a) - parseTime(b));
+  const programs = new Set();
+  DATA.forEach(d => d.program.split(/,\s*/).forEach(p => programs.add(p.trim())));
+  const advisors = new Set();
+  DATA.forEach(d => d.advisors.split(/,\s*/).forEach(a => { if (a.trim()) advisors.add(a.trim()); }));
+
+  const fDate = document.getElementById('filterDate');
+  dates.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = DAY_NAMES[d] || d; fDate.appendChild(o); });
+
+  const fTime = document.getElementById('filterTime');
+  timeSlots.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; fTime.appendChild(o); });
+
+  const fLoc = document.getElementById('filterLocation');
+  locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; fLoc.appendChild(o); });
+
+  const fProg = document.getElementById('filterProgram');
+  [...programs].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; fProg.appendChild(o); });
+
+  const fAdv = document.getElementById('filterAdvisor');
+  [...advisors].sort().forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; fAdv.appendChild(o); });
+}
+
+// ==================== FILTERING ====================
+function getActiveFilters() {
+  const f = {};
+  const date = document.getElementById('filterDate').value;
+  const time = document.getElementById('filterTime').value;
+  const loc = document.getElementById('filterLocation').value;
+  const prog = document.getElementById('filterProgram').value;
+  const adv = document.getElementById('filterAdvisor').value;
+  const kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
+  if (date) f.date = date;
+  if (time) f.time = time;
+  if (loc) f.location = loc;
+  if (prog) f.program = prog;
+  if (adv) f.advisor = adv;
+  if (kw) f.keyword = kw;
+  return f;
+}
+
+function matchesFilters(item, filters) {
+  if (filters.date && item.date !== filters.date) return false;
+  if (filters.time && item.time !== filters.time) return false;
+  if (filters.location && item.location !== filters.location) return false;
+  if (filters.program) {
+    const progs = item.program.split(/,\s*/);
+    if (!progs.some(p => p.trim().includes(filters.program))) return false;
+  }
+  if (filters.advisor) {
+    const advs = item.advisors.split(/,\s*/);
+    if (!advs.some(a => a.trim() === filters.advisor)) return false;
+  }
+  if (filters.keyword) {
+    const hay = (item.title + ' ' + item.presenters + ' ' + item.advisors + ' ' + item.program).toLowerCase();
+    if (!hay.includes(filters.keyword)) return false;
+  }
+  return true;
+}
+
+// ==================== CONFLICT DETECTION ====================
+function getConflicts() {
+  const slots = {};
+  mySchedule.forEach(id => {
+    const item = DATA.find(d => d.id === id);
+    if (!item) return;
+    const key = item.date + '|' + item.time;
+    if (!slots[key]) slots[key] = [];
+    slots[key].push(id);
+  });
+  const conflictIds = new Set();
+  Object.values(slots).forEach(ids => {
+    if (ids.length > 1) ids.forEach(id => conflictIds.add(id));
+  });
+  return conflictIds;
+}
+
+// ==================== RENDER ====================
+function renderFilterTags() {
+  const container = document.getElementById('filterTags');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const filters = getActiveFilters();
+  const labels = {date: 'Date', time: 'Time Slot', location: 'Location', program: 'Program', advisor: 'Advisor', keyword: 'Keyword'};
+  const displayVal = {date: v => DAY_NAMES[v] || v};
+  Object.entries(filters).forEach(([key, val]) => {
+    const tag = document.createElement('span');
+    tag.className = 'filter-tag';
+    const text = document.createElement('span');
+    text.textContent = labels[key] + ': ' + (displayVal[key] ? displayVal[key](val) : val);
+    const btn = document.createElement('button');
+    btn.textContent = '\u00d7';
+    btn.addEventListener('click', () => {
+      if (key === 'keyword') document.getElementById('filterKeyword').value = '';
+      else document.getElementById('filter' + key.charAt(0).toUpperCase() + key.slice(1)).value = '';
+      render();
+    });
+    tag.appendChild(text);
+    tag.appendChild(btn);
+    container.appendChild(tag);
+  });
+}
+
+function createCard(item, conflicts) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  if (mySchedule.has(item.id)) card.classList.add('in-schedule');
+  if (conflicts.has(item.id)) card.classList.add('has-conflict');
+
+  // Top row: time + location + program badge
+  const top = document.createElement('div');
+  top.className = 'card-top';
+  const metaLeft = document.createElement('div');
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  const timeSpan = document.createElement('span');
+  timeSpan.textContent = '\u{1f552} ' + item.time;
+  const locSpan = document.createElement('span');
+  locSpan.textContent = '\u{1f4cd} ' + item.location;
+  meta.appendChild(timeSpan);
+  meta.appendChild(locSpan);
+
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = item.title;
+
+  const presenters = document.createElement('div');
+  presenters.className = 'card-presenters';
+  presenters.textContent = item.presenters;
+
+  const advisor = document.createElement('div');
+  advisor.className = 'card-advisor';
+  const advLabel = document.createElement('strong');
+  advLabel.textContent = 'Advisor: ';
+  advisor.appendChild(advLabel);
+  advisor.appendChild(document.createTextNode(item.advisors));
+
+  metaLeft.appendChild(meta);
+  metaLeft.appendChild(title);
+  metaLeft.appendChild(presenters);
+  metaLeft.appendChild(advisor);
+
+  // Program badge
+  const badgeWrap = document.createElement('div');
+  const badge = document.createElement('span');
+  badge.className = 'program-badge';
+  badge.style.backgroundColor = getProgramColor(item.program);
+  badge.textContent = item.program;
+  badgeWrap.appendChild(badge);
+
+  top.appendChild(metaLeft);
+  top.appendChild(badgeWrap);
+  card.appendChild(top);
+
+  // Conflict warning
+  if (conflicts.has(item.id)) {
+    const warn = document.createElement('div');
+    warn.className = 'conflict-warn';
+    warn.textContent = '\u26a0 Time conflict with another session in your schedule';
+    card.appendChild(warn);
+  }
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  if (mySchedule.has(item.id)) {
+    const btnRm = document.createElement('button');
+    btnRm.className = 'btn-remove';
+    btnRm.textContent = 'Remove from Schedule';
+    btnRm.addEventListener('click', () => { mySchedule.delete(item.id); render(); });
+    actions.appendChild(btnRm);
+  } else {
+    const btnAdd = document.createElement('button');
+    btnAdd.className = 'btn-add';
+    btnAdd.textContent = '+ Add to My Schedule';
+    btnAdd.addEventListener('click', () => { mySchedule.add(item.id); render(); });
+    actions.appendChild(btnAdd);
+  }
+
+  if (item.abstract) {
+    const btnAbs = document.createElement('button');
+    btnAbs.className = 'btn-abstract';
+    btnAbs.textContent = 'View Abstract';
+    btnAbs.addEventListener('click', () => { window.open(item.abstract, '_blank', 'noopener,noreferrer'); });
+    actions.appendChild(btnAbs);
+  }
+
+  card.appendChild(actions);
+  return card;
+}
+
+function render() {
+  const filters = getActiveFilters();
+  renderFilterTags();
+  const conflicts = getConflicts();
+
+  let items = currentView === 'schedule'
+    ? DATA.filter(d => mySchedule.has(d.id))
+    : DATA;
+
+  items = items.filter(d => matchesFilters(d, filters));
+  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+  const container = document.getElementById('cardContainer');
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  document.getElementById('scheduleCount').textContent = mySchedule.size;
+  document.getElementById('resultCount').textContent =
+    items.length + ' session' + (items.length !== 1 ? 's' : '') +
+    (currentView === 'schedule' ? ' in your schedule' : ' found');
+
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    const p = document.createElement('p');
+    p.textContent = currentView === 'schedule' ? 'Your schedule is empty. Add sessions from the All Sessions view.' : 'No sessions match your filters.';
+    empty.appendChild(p);
+    container.appendChild(empty);
+    return;
+  }
+
+  let lastDate = '';
+  items.forEach(item => {
+    if (item.date !== lastDate) {
+      lastDate = item.date;
+      const sep = document.createElement('div');
+      sep.className = 'day-separator';
+      sep.textContent = DAY_NAMES[item.date] || item.date;
+      container.appendChild(sep);
+    }
+    container.appendChild(createCard(item, conflicts));
+  });
+}
+
+// ==================== EXPORT ====================
+function exportCsv() {
+  const filters = getActiveFilters();
+  let items = currentView === 'schedule'
+    ? DATA.filter(d => mySchedule.has(d.id))
+    : DATA;
+  items = items.filter(d => matchesFilters(d, filters));
+  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+  const escCsv = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const rows = [['Date','Time','Location','Presenters','Program','Title','Advisors','Abstract URL'].join(',')];
+  items.forEach(d => {
+    rows.push([
+      escCsv(DAY_NAMES[d.date] || d.date), escCsv(d.time), escCsv(d.location),
+      escCsv(d.presenters), escCsv(d.program), escCsv(d.title),
+      escCsv(d.advisors), escCsv(d.abstract)
+    ].join(','));
+  });
+
+  const blob = new Blob([rows.join('\n')], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'symposium_schedule_' + (currentView === 'schedule' ? 'my_schedule' : 'all') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==================== EVENT LISTENERS ====================
+function init() {
+  populateFilters();
+
+  // Filter changes
+  ['filterDate','filterTime','filterLocation','filterProgram','filterAdvisor'].forEach(id => {
+    document.getElementById(id).addEventListener('change', render);
+  });
+  let kwTimer;
+  document.getElementById('filterKeyword').addEventListener('input', () => {
+    clearTimeout(kwTimer);
+    kwTimer = setTimeout(render, 200);
+  });
+
+  // View toggle
+  document.getElementById('btnAll').addEventListener('click', () => {
+    currentView = 'all';
+    document.getElementById('btnAll').classList.add('active');
+    document.getElementById('btnSchedule').classList.remove('active');
+    render();
+  });
+  document.getElementById('btnSchedule').addEventListener('click', () => {
+    currentView = 'schedule';
+    document.getElementById('btnSchedule').classList.add('active');
+    document.getElementById('btnAll').classList.remove('active');
+    render();
+  });
+
+  // Clear filters
+  document.getElementById('btnClearFilters').addEventListener('click', () => {
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterTime').value = '';
+    document.getElementById('filterLocation').value = '';
+    document.getElementById('filterProgram').value = '';
+    document.getElementById('filterAdvisor').value = '';
+    document.getElementById('filterKeyword').value = '';
+    render();
+  });
+
+  // Export & Print
+  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
