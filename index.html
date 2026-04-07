@@ -1082,10 +1082,28 @@ function render(preserveScroll) {
 // ==================== EXPORT ====================
 function exportCsv() {
   const filters = getActiveFilters();
-  let items = currentView === 'schedule'
-    ? DATA.filter(d => mySchedule.has(d.id))
-    : DATA;
+  let items;
+  let label;
+
+  if (mySchedule.size > 0 && currentView !== 'schedule') {
+    const choice = confirm('Export only your saved schedule?\n\nOK = My Schedule\nCancel = All filtered sessions');
+    if (choice) {
+      items = DATA.filter(d => mySchedule.has(d.id));
+      label = 'my_schedule';
+    } else {
+      items = DATA;
+      label = 'all';
+    }
+  } else if (currentView === 'schedule') {
+    items = DATA.filter(d => mySchedule.has(d.id));
+    label = 'my_schedule';
+  } else {
+    items = DATA;
+    label = 'all';
+  }
+
   items = items.filter(d => matchesFilters(d, filters));
+  if (items.length === 0) { alert('No sessions to export.'); return; }
   items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
   const escCsv = v => '"' + String(v).replace(/"/g, '""') + '"';
@@ -1102,7 +1120,7 @@ function exportCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'symposium_schedule_' + (currentView === 'schedule' ? 'my_schedule' : 'all') + '.csv';
+  a.download = 'symposium_schedule_' + label + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
