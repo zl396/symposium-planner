@@ -637,11 +637,11 @@ function matchesFilters(item, filters) {
       const jointParts = slashParts.slice(1);
       const pri = concParts[0] || '';
       const sec = concParts[1] || '';
-      const all = [...concParts, ...jointParts];
-      // primary filter: OR — match if any selected primary is found
-      if (filters.primary && !filters.primary.some(fp => pri === fp || all.includes(fp))) return false;
-      // secondary filter: OR — match if any selected secondary is found
-      if (filters.secondary && !filters.secondary.some(fs => sec === fs || all.includes(fs))) return false;
+      const joint = jointParts;
+      // primary filter: match pri or joint degree
+      if (filters.primary && !filters.primary.some(fp => pri === fp || joint.includes(fp))) return false;
+      // secondary filter: match sec or joint degree
+      if (filters.secondary && !filters.secondary.some(fs => sec === fs || joint.includes(fs))) return false;
       return true;
     });
     if (!match) return false;
