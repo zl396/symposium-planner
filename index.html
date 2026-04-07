@@ -29,6 +29,13 @@ a { color: var(--accent); }
 .toolbar .btn-export { background: var(--green); color: #fff; border-color: var(--green); }
 .toolbar .btn-export:hover { opacity: .9; }
 
+/* Dropdown */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-menu { display: none; position: absolute; top: 100%; left: 0; margin-top: .3rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,.12); z-index: 50; min-width: 200px; overflow: hidden; }
+.dropdown-menu.open { display: block; }
+.dropdown-menu button { display: block; width: 100%; padding: .55rem .9rem; border: none; background: none; text-align: left; font-size: .85rem; cursor: pointer; color: var(--text); }
+.dropdown-menu button:hover { background: var(--accent-light); }
+
 /* Filters */
 .filters { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
 .filters h3 { font-size: .9rem; margin-bottom: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
@@ -152,7 +159,14 @@ a { color: var(--accent); }
     <button class="btn active" id="btnAll">All Sessions</button>
     <button class="btn" id="btnSchedule">My Schedule (<span id="scheduleCount">0</span>)</button>
     <button class="btn btn-export" id="btnExportCsv">Export CSV</button>
-    <button class="btn btn-export" id="btnExportIcs">Export to Outlook / Calendar</button>
+    <div class="dropdown" id="calDropdown">
+      <button class="btn btn-export" id="btnCalMenu">Export to Calendar &#9662;</button>
+      <div class="dropdown-menu" id="calMenu">
+        <button id="btnOutlookWeb">Outlook (Web)</button>
+        <button id="btnGoogleCal">Google Calendar</button>
+        <button id="btnDownloadIcs">Download .ics file</button>
+      </div>
+    </div>
     <button class="btn btn-export" id="btnPrint">Print</button>
   </div>
 
@@ -979,6 +993,84 @@ function escIcsText(s) {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
+function getExportItems() {
+  const filters = getActiveFilters();
+  let items = currentView === 'schedule'
+    ? DATA.filter(d => mySchedule.has(d.id))
+    : DATA;
+  items = items.filter(d => matchesFilters(d, filters));
+  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  return items;
+}
+
+function toUtcString(dateStr, timeStr, durationMin) {
+  // Convert to a UTC-formatted string for URL params: 20260407T130000Z
+  const m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return '';
+  let h = parseInt(m[1]); const mi = parseInt(m[2]); const ap = m[3].toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  // dateStr = "2026-04-09", America/New_York is UTC-4 in April (EDT)
+  const dt = new Date(dateStr + 'T' + String(h).padStart(2,'0') + ':' + String(mi).padStart(2,'0') + ':00');
+  // EDT offset = +4 hours to get UTC
+  const utcMs = dt.getTime() + 4 * 60 * 60 * 1000;
+  const start = new Date(utcMs);
+  const end = new Date(utcMs + durationMin * 60 * 1000);
+  const fmt = d => d.getUTCFullYear() +
+    String(d.getUTCMonth()+1).padStart(2,'0') +
+    String(d.getUTCDate()).padStart(2,'0') + 'T' +
+    String(d.getUTCHours()).padStart(2,'0') +
+    String(d.getUTCMinutes()).padStart(2,'0') + '00Z';
+  return { start: fmt(start), end: fmt(end) };
+}
+
+function exportOutlookWeb() {
+  const items = getExportItems();
+  if (items.length === 0) { alert('No sessions to export.'); return; }
+  if (items.length > 10) {
+    if (!confirm('You have ' + items.length + ' sessions. Outlook Web opens one tab per event. Continue?')) return;
+  }
+  items.forEach(d => {
+    const times = toUtcString(d.date, d.time, 25);
+    const zoom = getZoomLink(d);
+    const body = ['Presenters: ' + d.presenters, 'Advisor: ' + d.advisors,
+      d.abstract ? 'Abstract: ' + d.abstract : '', zoom ? 'Zoom: ' + zoom : ''].filter(Boolean).join('\n');
+    const params = new URLSearchParams({
+      rru: 'addevent',
+      subject: d.title,
+      startdt: times.start,
+      enddt: times.end,
+      location: d.location,
+      body: body,
+      allday: 'false',
+      path: '/calendar/action/compose'
+    });
+    window.open('https://outlook.live.com/calendar/0/action/compose?' + params.toString(), '_blank', 'noopener,noreferrer');
+  });
+}
+
+function exportGoogleCal() {
+  const items = getExportItems();
+  if (items.length === 0) { alert('No sessions to export.'); return; }
+  if (items.length > 10) {
+    if (!confirm('You have ' + items.length + ' sessions. Google Calendar opens one tab per event. Continue?')) return;
+  }
+  items.forEach(d => {
+    const times = toUtcString(d.date, d.time, 25);
+    const zoom = getZoomLink(d);
+    const details = ['Presenters: ' + d.presenters, 'Advisor: ' + d.advisors,
+      d.abstract ? 'Abstract: ' + d.abstract : '', zoom ? 'Zoom: ' + zoom : ''].filter(Boolean).join('\n');
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: d.title,
+      dates: times.start + '/' + times.end,
+      location: d.location,
+      details: details
+    });
+    window.open('https://calendar.google.com/calendar/render?' + params.toString(), '_blank', 'noopener,noreferrer');
+  });
+}
+
 function exportIcs() {
   const filters = getActiveFilters();
   let items = currentView === 'schedule'
@@ -1092,7 +1184,15 @@ function init() {
 
   // Export & Print
   document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnExportIcs').addEventListener('click', exportIcs);
+  // Calendar dropdown
+  const calBtn = document.getElementById('btnCalMenu');
+  const calMenu = document.getElementById('calMenu');
+  calBtn.addEventListener('click', (e) => { e.stopPropagation(); calMenu.classList.toggle('open'); });
+  document.addEventListener('click', () => calMenu.classList.remove('open'));
+  calMenu.addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('btnOutlookWeb').addEventListener('click', () => { calMenu.classList.remove('open'); exportOutlookWeb(); });
+  document.getElementById('btnGoogleCal').addEventListener('click', () => { calMenu.classList.remove('open'); exportGoogleCal(); });
+  document.getElementById('btnDownloadIcs').addEventListener('click', () => { calMenu.classList.remove('open'); exportIcs(); });
   document.getElementById('btnPrint').addEventListener('click', () => window.print());
 
   render();
