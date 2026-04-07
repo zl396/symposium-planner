@@ -628,13 +628,13 @@ function createCard(item, conflicts) {
     const btnRm = document.createElement('button');
     btnRm.className = 'btn-remove';
     btnRm.textContent = 'Remove from Schedule';
-    btnRm.addEventListener('click', () => { mySchedule.delete(item.id); render(); });
+    btnRm.addEventListener('click', () => { mySchedule.delete(item.id); render(true); });
     actions.appendChild(btnRm);
   } else {
     const btnAdd = document.createElement('button');
     btnAdd.className = 'btn-add';
     btnAdd.textContent = '+ Add to My Schedule';
-    btnAdd.addEventListener('click', () => { mySchedule.add(item.id); render(); });
+    btnAdd.addEventListener('click', () => { mySchedule.add(item.id); render(true); });
     actions.appendChild(btnAdd);
   }
 
@@ -829,7 +829,7 @@ function renderTimeline(items, conflicts) {
         const btnRm = document.createElement('button');
         btnRm.className = 'btn-remove';
         btnRm.textContent = 'Remove';
-        btnRm.addEventListener('click', (e) => { e.stopPropagation(); mySchedule.delete(item.id); render(); });
+        btnRm.addEventListener('click', (e) => { e.stopPropagation(); mySchedule.delete(item.id); render(true); });
         actions.appendChild(btnRm);
 
         if (item.abstract) {
@@ -862,7 +862,8 @@ function renderTimeline(items, conflicts) {
   });
 }
 
-function render() {
+function render(preserveScroll) {
+  const scrollY = preserveScroll ? window.scrollY : 0;
   const filters = getActiveFilters();
   renderFilterTags();
   const conflicts = getConflicts();
@@ -915,6 +916,7 @@ function render() {
   });
 
   saveState();
+  if (preserveScroll) requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 
 // ==================== EXPORT ====================
