@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Symposium Planner — Persistence & UX Tests</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+h1 { font-size: 1.3rem; }
+h2 { font-size: 1.1rem; margin-top: 2rem; color: #003366; }
+.test { border: 1px solid #e2e5ea; border-radius: 8px; padding: 1rem; margin: .5rem 0; }
+.test-name { font-weight: 600; }
+.pass { color: #059669; } .fail { color: #dc2626; } .skip { color: #d97706; }
+.result-line { margin: .25rem 0 .25rem 1rem; font-size: .9rem; }
+#summary { margin-top: 1.5rem; padding: 1rem; border-radius: 8px; font-weight: 600; font-size: 1rem; }
+#summary.all-pass { background: #ecfdf5; color: #059669; }
+#summary.has-fail { background: #fef2f2; color: #dc2626; }
+iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>Symposium Planner — Automated Test Suite</h1>
+<p>Tests evaluate schedule persistence, filter state, view toggle, conflict detection, and edge cases across simulated page reloads.</p>
+<div id="results"></div>
+<div id="summary"></div>
+
+<iframe id="testFrame" src="index.html"></iframe>
+
+<script>
+const results = [];
+const container = document.getElementById('results');
+
+function log(category, name, passed, detail) {
+  results.push({ category, name, passed, detail });
+  // Find or create category section
+  let sec = document.querySelector(`[data-cat="${category}"]`);
+  if (!sec) {
+    const h2 = document.createElement('h2');
+    h2.textContent = category;
+    container.appendChild(h2);
+    sec = document.createElement('div');
+    sec.dataset.cat = category;
+    container.appendChild(sec);
+  }
+  const div = document.createElement('div');
+  div.className = 'result-line';
+  const icon = passed ? '✓' : '✗';
+  const cls = passed ? 'pass' : 'fail';
+  div.innerHTML = `<span class="${cls}">${icon}</span> <span class="test-name">${name}</span> — ${detail}`;
+  sec.appendChild(div);
+}
+
+function updateSummary() {
+  const total = results.length;
+  const passed = results.filter(r => r.passed).length;
+  const failed = total - passed;
+  const el = document.getElementById('summary');
+  el.textContent = `${passed}/${total} tests passed` + (failed ? `, ${failed} failed` : '');
+  el.className = failed ? 'has-fail' : 'all-pass';
+}
+
+// Helper: access iframe's window/document
+function getFrame() {
+  const f = document.getElementById('testFrame');
+  return { win: f.contentWindow, doc: f.contentDocument };
+}
+
+// Helper: reload iframe and wait for it to load
+function reloadFrame() {
+  return new Promise(resolve => {
+    const f = document.getElementById('testFrame');
+    f.onload = () => setTimeout(resolve, 100); // small delay for init()
+    f.src = 'index.html?' + Date.now(); // cache-bust
+  });
+}
+
+// ===================== TEST SCENARIOS =====================
+async function runTests() {
+
+  // ----- Clean slate -----
+  localStorage.removeItem('symposium2026');
+  await reloadFrame();
+
+  const { win, doc } = getFrame();
+
+  // ==========================================
+  // SCENARIO 1: Fresh load — no saved state
+  // ==========================================
+  log('1. Fresh Load', 'Schedule is empty',
+    win.mySchedule.size === 0,
+    `Schedule size: ${win.mySchedule.size}`);
+
+  log('1. Fresh Load', 'View defaults to "all"',
+    win.currentView === 'all',
+    `currentView: ${win.currentView}`);
+
+  log('1. Fresh Load', 'All sessions rendered',
+    doc.querySelectorAll('.card').length === win.DATA.length,
+    `Cards: ${doc.querySelectorAll('.card').length}, Data: ${win.DATA.length}`);
+
+  log('1. Fresh Load', 'No filter tags shown',
+    doc.querySelectorAll('.filter-tag').length === 0,
+    `Filter tags: ${doc.querySelectorAll('.filter-tag').length}`);
+
+  // ==========================================
+  // SCENARIO 2: Add sessions and reload
+  // ==========================================
+  // Simulate adding sessions 1, 5, 12
+  win.mySchedule.add(1);
+  win.mySchedule.add(5);
+  win.mySchedule.add(12);
+  win.render();
+
+  log('2. Add & Reload', 'Sessions added to schedule',
+    win.mySchedule.size === 3,
+    `Schedule size: ${win.mySchedule.size}`);
+
+  // Verify localStorage was written
+  const stored = JSON.parse(localStorage.getItem('symposium2026'));
+  log('2. Add & Reload', 'State saved to localStorage',
+    stored && stored.schedule.length === 3,
+    `Stored schedule: ${JSON.stringify(stored?.schedule)}`);
+
+  // Reload and check persistence
+  await reloadFrame();
+  const f2 = getFrame();
+
+  log('2. Add & Reload', 'Schedule survives reload',
+    f2.win.mySchedule.size === 3,
+    `Schedule after reload: ${[...f2.win.mySchedule].join(',')}`);
+
+  log('2. Add & Reload', 'Correct session IDs restored',
+    f2.win.mySchedule.has(1) && f2.win.mySchedule.has(5) && f2.win.mySchedule.has(12),
+    `Has 1: ${f2.win.mySchedule.has(1)}, 5: ${f2.win.mySchedule.has(5)}, 12: ${f2.win.mySchedule.has(12)}`);
+
+  log('2. Add & Reload', 'Schedule count badge updated',
+    f2.doc.getElementById('scheduleCount').textContent === '3',
+    `Badge: ${f2.doc.getElementById('scheduleCount').textContent}`);
+
+  // Cards with in-schedule class
+  const scheduledCards = f2.doc.querySelectorAll('.card.in-schedule');
+  log('2. Add & Reload', 'Scheduled cards highlighted',
+    scheduledCards.length === 3,
+    `Cards with in-schedule class: ${scheduledCards.length}`);
+
+  // ==========================================
+  // SCENARIO 3: Filter state persistence
+  // ==========================================
+  f2.doc.getElementById('filterDate').value = '2026-04-09';
+  f2.win.render();
+
+  await reloadFrame();
+  const f3 = getFrame();
+
+  log('3. Filter Persistence', 'Date filter survives reload',
+    f3.doc.getElementById('filterDate').value === '2026-04-09',
+    `filterDate: ${f3.doc.getElementById('filterDate').value}`);
+
+  // Set multiple filters
+  f3.doc.getElementById('filterLocation').value = 'Field Auditorium, Grainger Hall';
+  f3.win.render();
+
+  await reloadFrame();
+  const f3b = getFrame();
+
+  log('3. Filter Persistence', 'Multiple filters survive reload',
+    f3b.doc.getElementById('filterDate').value === '2026-04-09' &&
+    f3b.doc.getElementById('filterLocation').value === 'Field Auditorium, Grainger Hall',
+    `Date: ${f3b.doc.getElementById('filterDate').value}, Location: ${f3b.doc.getElementById('filterLocation').value}`);
+
+  // Filter tags rendered correctly
+  const tags = f3b.doc.querySelectorAll('.filter-tag');
+  log('3. Filter Persistence', 'Filter tags restored',
+    tags.length === 2,
+    `Filter tags: ${tags.length}`);
+
+  // ==========================================
+  // SCENARIO 4: Keyword search persistence
+  // ==========================================
+  f3b.doc.getElementById('filterKeyword').value = 'energy';
+  f3b.win.render();
+
+  await reloadFrame();
+  const f4 = getFrame();
+
+  log('4. Keyword Persistence', 'Keyword survives reload',
+    f4.doc.getElementById('filterKeyword').value === 'energy',
+    `Keyword: "${f4.doc.getElementById('filterKeyword').value}"`);
+
+  // ==========================================
+  // SCENARIO 5: View toggle persistence (My Schedule view)
+  // ==========================================
+  // Clear filters first
+  f4.doc.getElementById('filterDate').value = '';
+  f4.doc.getElementById('filterLocation').value = '';
+  f4.doc.getElementById('filterKeyword').value = '';
+  f4.win.currentView = 'schedule';
+  f4.win.render();
+
+  await reloadFrame();
+  const f5 = getFrame();
+
+  log('5. View Toggle', 'Schedule view survives reload',
+    f5.win.currentView === 'schedule',
+    `currentView: ${f5.win.currentView}`);
+
+  log('5. View Toggle', 'Schedule button has active class',
+    f5.doc.getElementById('btnSchedule').classList.contains('active'),
+    `btnSchedule active: ${f5.doc.getElementById('btnSchedule').classList.contains('active')}`);
+
+  log('5. View Toggle', 'Only scheduled sessions shown',
+    f5.doc.querySelectorAll('.card').length === 3,
+    `Cards shown: ${f5.doc.querySelectorAll('.card').length}`);
+
+  // ==========================================
+  // SCENARIO 6: Remove session and verify
+  // ==========================================
+  f5.win.mySchedule.delete(5);
+  f5.win.render();
+
+  await reloadFrame();
+  const f6 = getFrame();
+
+  log('6. Remove Session', 'Removal persists after reload',
+    f6.win.mySchedule.size === 2 && !f6.win.mySchedule.has(5),
+    `Size: ${f6.win.mySchedule.size}, has(5): ${f6.win.mySchedule.has(5)}`);
+
+  // ==========================================
+  // SCENARIO 7: Conflict detection with persistence
+  // ==========================================
+  // Add two sessions at the same time slot
+  // Sessions 12 and 27 are both on 2026-04-09, 9:05 AM but different rooms
+  f6.win.currentView = 'all';
+  f6.win.mySchedule.clear();
+  f6.win.mySchedule.add(12); // 2026-04-09, 9:05 AM, Field Auditorium
+  f6.win.mySchedule.add(27); // 2026-04-09, 9:05 AM, Room 2102
+  f6.win.render();
+
+  const conflictsBefore = f6.win.getConflicts();
+  log('7. Conflict Detection', 'Conflicts detected for overlapping sessions',
+    conflictsBefore.has(12) && conflictsBefore.has(27),
+    `Conflicts: ${[...conflictsBefore].join(',')}`);
+
+  await reloadFrame();
+  const f7 = getFrame();
+
+  const conflictsAfter = f7.win.getConflicts();
+  log('7. Conflict Detection', 'Conflicts persist after reload',
+    conflictsAfter.has(12) && conflictsAfter.has(27),
+    `Conflicts after reload: ${[...conflictsAfter].join(',')}`);
+
+  const conflictCards = f7.doc.querySelectorAll('.card.has-conflict');
+  log('7. Conflict Detection', 'Conflict cards visually marked',
+    conflictCards.length === 2,
+    `Cards with conflict class: ${conflictCards.length}`);
+
+  // ==========================================
+  // SCENARIO 8: Clear all filters
+  // ==========================================
+  f7.doc.getElementById('filterDate').value = '2026-04-10';
+  f7.doc.getElementById('filterProgram').value = 'DEL';
+  f7.win.render();
+
+  // Simulate clicking clear all
+  f7.doc.getElementById('btnClearFilters').click();
+  await new Promise(r => setTimeout(r, 50));
+
+  log('8. Clear Filters', 'All filters cleared',
+    f7.doc.getElementById('filterDate').value === '' &&
+    f7.doc.getElementById('filterProgram').value === '',
+    `Date: "${f7.doc.getElementById('filterDate').value}", Program: "${f7.doc.getElementById('filterProgram').value}"`);
+
+  await reloadFrame();
+  const f8 = getFrame();
+
+  log('8. Clear Filters', 'Cleared state persists after reload',
+    f8.doc.getElementById('filterDate').value === '' &&
+    f8.doc.getElementById('filterProgram').value === '',
+    `Date: "${f8.doc.getElementById('filterDate').value}", Program: "${f8.doc.getElementById('filterProgram').value}"`);
+
+  // ==========================================
+  // SCENARIO 9: Large schedule (stress test)
+  // ==========================================
+  f8.win.mySchedule.clear();
+  // Add all 127 sessions
+  f8.win.DATA.forEach(d => f8.win.mySchedule.add(d.id));
+  f8.win.render();
+
+  log('9. Stress Test', 'All sessions can be scheduled',
+    f8.win.mySchedule.size === f8.win.DATA.length,
+    `Schedule: ${f8.win.mySchedule.size}, Total: ${f8.win.DATA.length}`);
+
+  await reloadFrame();
+  const f9 = getFrame();
+
+  log('9. Stress Test', 'Full schedule survives reload',
+    f9.win.mySchedule.size === f9.win.DATA.length,
+    `Schedule after reload: ${f9.win.mySchedule.size}`);
+
+  // ==========================================
+  // SCENARIO 10: localStorage corruption recovery
+  // ==========================================
+  localStorage.setItem('symposium2026', 'INVALID JSON{{{{');
+  await reloadFrame();
+  const f10 = getFrame();
+
+  log('10. Corruption Recovery', 'Handles corrupted localStorage gracefully',
+    f10.win.mySchedule.size === 0 && f10.win.currentView === 'all',
+    `Schedule: ${f10.win.mySchedule.size}, View: ${f10.win.currentView}`);
+
+  // ==========================================
+  // SCENARIO 11: Export CSV with persisted schedule
+  // ==========================================
+  f10.win.mySchedule.add(1);
+  f10.win.mySchedule.add(2);
+  f10.win.currentView = 'schedule';
+  f10.win.render();
+
+  // We can't easily test file download, but verify the data is correct
+  const csvItems = f10.win.DATA.filter(d => f10.win.mySchedule.has(d.id));
+  log('11. Export', 'CSV export would contain correct sessions',
+    csvItems.length === 2 && csvItems[0].id === 1 && csvItems[1].id === 2,
+    `Export items: ${csvItems.map(i => i.id).join(',')}`);
+
+  // ==========================================
+  // SCENARIO 12: Switch between views rapidly
+  // ==========================================
+  f10.win.currentView = 'all';
+  f10.win.render();
+  f10.win.currentView = 'schedule';
+  f10.win.render();
+  f10.win.currentView = 'all';
+  f10.win.render();
+
+  await reloadFrame();
+  const f12 = getFrame();
+
+  log('12. Rapid View Switch', 'Last view state preserved',
+    f12.win.currentView === 'all',
+    `View: ${f12.win.currentView}`);
+
+  // ==========================================
+  // Cleanup and summary
+  // ==========================================
+  localStorage.removeItem('symposium2026');
+  updateSummary();
+}
+
+// Wait for iframe to load, then run
+document.getElementById('testFrame').onload = () => setTimeout(runTests, 200);
+</script>
+</body>
+</html>

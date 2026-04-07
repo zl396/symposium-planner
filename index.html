@@ -310,8 +310,35 @@ const DATA = [
 ];
 
 // ==================== APP STATE ====================
-const mySchedule = new Set();
-let currentView = 'all'; // 'all' or 'schedule'
+const STORAGE_KEY = 'symposium2026';
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      schedule: [...mySchedule],
+      view: currentView,
+      filters: {
+        date: document.getElementById('filterDate')?.value || '',
+        time: document.getElementById('filterTime')?.value || '',
+        location: document.getElementById('filterLocation')?.value || '',
+        program: document.getElementById('filterProgram')?.value || '',
+        advisor: document.getElementById('filterAdvisor')?.value || '',
+        keyword: document.getElementById('filterKeyword')?.value || ''
+      },
+      scrollY: window.scrollY
+    }));
+  } catch(e) {}
+}
+
+const saved = loadState();
+const mySchedule = new Set(saved?.schedule || []);
+let currentView = saved?.view || 'all';
 
 // ==================== ZOOM LINKS ====================
 const ZOOM_LINKS = {
@@ -627,6 +654,8 @@ function render() {
     }
     container.appendChild(createCard(item, conflicts));
   });
+
+  saveState();
 }
 
 // ==================== EXPORT ====================
@@ -662,6 +691,22 @@ function exportCsv() {
 // ==================== EVENT LISTENERS ====================
 function init() {
   populateFilters();
+
+  // Restore saved filters
+  if (saved?.filters) {
+    document.getElementById('filterDate').value = saved.filters.date || '';
+    document.getElementById('filterTime').value = saved.filters.time || '';
+    document.getElementById('filterLocation').value = saved.filters.location || '';
+    document.getElementById('filterProgram').value = saved.filters.program || '';
+    document.getElementById('filterAdvisor').value = saved.filters.advisor || '';
+    document.getElementById('filterKeyword').value = saved.filters.keyword || '';
+  }
+
+  // Restore view toggle UI
+  if (currentView === 'schedule') {
+    document.getElementById('btnSchedule').classList.add('active');
+    document.getElementById('btnAll').classList.remove('active');
+  }
 
   // Filter changes
   ['filterDate','filterTime','filterLocation','filterProgram','filterAdvisor'].forEach(id => {
@@ -703,6 +748,11 @@ function init() {
   document.getElementById('btnPrint').addEventListener('click', () => window.print());
 
   render();
+
+  // Restore scroll position after render
+  if (saved?.scrollY) {
+    requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+  }
 }
 
 init();
