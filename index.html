@@ -108,6 +108,7 @@ a { color: var(--accent); }
     <button class="btn active" id="btnAll">All Sessions</button>
     <button class="btn" id="btnSchedule">My Schedule (<span id="scheduleCount">0</span>)</button>
     <button class="btn btn-export" id="btnExportCsv">Export CSV</button>
+    <button class="btn btn-export" id="btnExportIcs">Export to Outlook / Calendar</button>
     <button class="btn btn-export" id="btnPrint">Print</button>
   </div>
 
@@ -688,6 +689,92 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+// ==================== ICS EXPORT ====================
+function formatIcsDate(dateStr, timeStr) {
+  // dateStr: "2026-04-09", timeStr: "9:05 AM"
+  const m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return '';
+  let h = parseInt(m[1]);
+  const min = parseInt(m[2]);
+  const ap = m[3].toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  const d = dateStr.replace(/-/g, '');
+  return d + 'T' + String(h).padStart(2,'0') + String(min).padStart(2,'0') + '00';
+}
+
+function addMinutesToIcsDate(icsDate, minutes) {
+  const y = parseInt(icsDate.substring(0,4));
+  const mo = parseInt(icsDate.substring(4,6)) - 1;
+  const d = parseInt(icsDate.substring(6,8));
+  const h = parseInt(icsDate.substring(9,11));
+  const mi = parseInt(icsDate.substring(11,13));
+  const dt = new Date(y, mo, d, h, mi + minutes);
+  const pad = n => String(n).padStart(2,'0');
+  return dt.getFullYear() + pad(dt.getMonth()+1) + pad(dt.getDate()) + 'T' +
+    pad(dt.getHours()) + pad(dt.getMinutes()) + '00';
+}
+
+function escIcsText(s) {
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+function exportIcs() {
+  const filters = getActiveFilters();
+  let items = currentView === 'schedule'
+    ? DATA.filter(d => mySchedule.has(d.id))
+    : DATA;
+  items = items.filter(d => matchesFilters(d, filters));
+  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+  if (items.length === 0) { alert('No sessions to export.'); return; }
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Duke Nicholas School//Symposium Planner//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Spring Symposium 2026',
+    'X-WR-TIMEZONE:America/New_York'
+  ];
+
+  items.forEach(d => {
+    const dtStart = formatIcsDate(d.date, d.time);
+    const dtEnd = addMinutesToIcsDate(dtStart, 25); // 25-min presentation slots
+    const zoom = getZoomLink(d);
+    const desc = [
+      'Presenters: ' + d.presenters,
+      'Program: ' + d.program,
+      'Advisor: ' + d.advisors,
+      d.abstract ? 'Abstract: ' + d.abstract : '',
+      zoom ? 'Zoom: ' + zoom : ''
+    ].filter(Boolean).join('\\n');
+
+    lines.push('BEGIN:VEVENT');
+    lines.push('DTSTART;TZID=America/New_York:' + dtStart);
+    lines.push('DTEND;TZID=America/New_York:' + dtEnd);
+    lines.push('SUMMARY:' + escIcsText(d.title));
+    lines.push('DESCRIPTION:' + escIcsText(desc));
+    lines.push('LOCATION:' + escIcsText(d.location));
+    if (zoom) lines.push('URL:' + zoom);
+    lines.push('UID:symposium2026-' + d.id + '@duke.edu');
+    lines.push('END:VEVENT');
+  });
+
+  lines.push('END:VCALENDAR');
+
+  const blob = new Blob([lines.join('\r\n')], {type: 'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'symposium_' + (currentView === 'schedule' ? 'my_schedule' : 'all') + '.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ==================== EVENT LISTENERS ====================
 function init() {
   populateFilters();
@@ -745,6 +832,7 @@ function init() {
 
   // Export & Print
   document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnExportIcs').addEventListener('click', exportIcs);
   document.getElementById('btnPrint').addEventListener('click', () => window.print());
 
   render();
