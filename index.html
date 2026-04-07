@@ -78,9 +78,49 @@ a { color: var(--accent); }
 .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
 .empty p { font-size: 1.1rem; }
 
+/* Timeline View */
+.timeline { margin-bottom: 1.5rem; }
+.timeline-day { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1rem; overflow: hidden; }
+.timeline-day-header { background: var(--accent); color: #fff; padding: .5rem 1rem; font-weight: 600; font-size: .9rem; }
+.timeline-grid { position: relative; display: grid; min-height: 60px; }
+.timeline-hour-labels { display: flex; flex-direction: column; background: #f9fafb; border-right: 1px solid var(--border); min-width: 70px; }
+.timeline-hour-label { font-size: .72rem; color: var(--muted); padding: 0 .5rem; text-align: right; border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 2px; }
+.timeline-body { position: relative; flex: 1; min-height: 60px; }
+.timeline-row { display: flex; border-bottom: 1px solid #f0f0f0; }
+.timeline-slot { position: relative; flex: 1; min-height: 32px; border-right: 1px solid #f0f0f0; }
+.timeline-slot:last-child { border-right: none; }
+.timeline-loc-headers { display: flex; border-bottom: 2px solid var(--border); background: #f9fafb; }
+.timeline-loc-header { flex: 1; padding: .3rem .4rem; font-size: .68rem; font-weight: 600; color: var(--muted); text-align: center; border-right: 1px solid #f0f0f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline-loc-header:last-child { border-right: none; }
+.tl-block { position: absolute; border-radius: 4px; padding: .25rem .4rem; font-size: .7rem; overflow: hidden; cursor: pointer; border: 1px solid rgba(0,0,0,.1); transition: .15s; z-index: 1; min-height: 28px; display: flex; flex-direction: column; justify-content: center; }
+.tl-block:hover { box-shadow: 0 2px 8px rgba(0,0,0,.18); z-index: 10; transform: scale(1.02); }
+.tl-block.has-conflict { outline: 2px solid var(--orange); outline-offset: -1px; }
+.tl-block-title { font-weight: 600; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tl-block-meta { font-size: .65rem; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-block-actions { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); padding: .3rem; box-shadow: 0 4px 12px rgba(0,0,0,.15); z-index: 20; }
+.tl-block:hover .tl-block-actions { display: flex; gap: .3rem; flex-wrap: wrap; }
+.tl-block-actions button { padding: .2rem .4rem; border-radius: 4px; font-size: .68rem; cursor: pointer; border: 1px solid var(--border); background: #fff; transition: .1s; white-space: nowrap; }
+.tl-block-actions .btn-remove { border-color: var(--red); color: var(--red); }
+.tl-block-actions .btn-abstract { border-color: var(--accent); color: var(--accent); }
+.tl-block-actions .btn-zoom { border-color: #2563eb; color: #2563eb; }
+.timeline-legend { display: flex; gap: 1rem; flex-wrap: wrap; padding: .5rem 0; font-size: .75rem; color: var(--muted); margin-bottom: .5rem; }
+.timeline-legend-item { display: inline-flex; align-items: center; gap: .3rem; }
+.timeline-legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.timeline-empty-day { padding: 1.5rem; text-align: center; color: var(--muted); font-size: .9rem; }
+.timeline-time-labels { position: relative; min-width: 65px; background: #f9fafb; border-right: 1px solid var(--border); }
+.timeline-time-label { position: absolute; right: .4rem; font-size: .68rem; color: var(--muted); transform: translateY(-50%); white-space: nowrap; }
+.timeline-cols { position: relative; flex: 1; display: flex; }
+.timeline-col { flex: 1; position: relative; border-right: 1px solid #f0f0f0; }
+.timeline-col:last-child { border-right: none; }
+.timeline-hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid #f0f0f0; }
+.timeline-hour-line.on-hour { border-top-style: dashed; border-top-color: #d1d5db; }
+.timeline-now-line { position: absolute; left: 0; right: 0; border-top: 2px solid var(--red); z-index: 5; }
+.timeline-now-label { position: absolute; right: 0; top: -9px; background: var(--red); color: #fff; font-size: .6rem; padding: 0 .3rem; border-radius: 3px; }
+
 /* Print */
 @media print {
-  .header, .filters, .toolbar, .card-actions, .stats { display: none !important; }
+  .header, .filters, .toolbar, .card-actions, .stats, .tl-block-actions { display: none !important; }
+  .timeline-day { break-inside: avoid; }
   .container { max-width: 100%; padding: 0; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; margin-bottom: .5rem; }
   .day-separator { background: #333 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -93,6 +133,10 @@ a { color: var(--accent); }
   .filter-row { flex-direction: column; }
   .filter-group { min-width: 100%; }
   .toolbar { flex-direction: column; align-items: stretch; }
+  .timeline-loc-header { font-size: .6rem; padding: .2rem; }
+  .timeline-time-labels { min-width: 50px; }
+  .tl-block { font-size: .62rem; padding: .15rem .25rem; }
+  .tl-block-meta { display: none; }
 }
 </style>
 </head>
@@ -152,6 +196,7 @@ a { color: var(--accent); }
     <span id="resultCount"></span>
   </div>
 
+  <div class="timeline" id="timelineContainer" style="display:none;"></div>
   <div class="cards" id="cardContainer"></div>
 </div>
 
@@ -614,6 +659,209 @@ function createCard(item, conflicts) {
   return card;
 }
 
+// ==================== TIMELINE VIEW ====================
+const SLOT_DURATION = 25; // minutes per session
+const PX_PER_MIN = 2.2;
+
+function renderTimeline(items, conflicts) {
+  const tl = document.getElementById('timelineContainer');
+  while (tl.firstChild) tl.removeChild(tl.firstChild);
+
+  if (items.length === 0) {
+    tl.style.display = 'none';
+    return;
+  }
+  tl.style.display = 'block';
+
+  // Group by date
+  const byDate = {};
+  items.forEach(d => {
+    if (!byDate[d.date]) byDate[d.date] = [];
+    byDate[d.date].push(d);
+  });
+
+  // Legend
+  const legend = document.createElement('div');
+  legend.className = 'timeline-legend';
+  const seenProgs = new Set();
+  items.forEach(d => {
+    const p = d.program.split(/[-,\/]/)[0].trim();
+    if (!seenProgs.has(p)) {
+      seenProgs.add(p);
+      const li = document.createElement('span');
+      li.className = 'timeline-legend-item';
+      const sw = document.createElement('span');
+      sw.className = 'timeline-legend-swatch';
+      sw.style.backgroundColor = PROGRAM_COLORS[p] || '#6b7280';
+      li.appendChild(sw);
+      li.appendChild(document.createTextNode(p));
+      legend.appendChild(li);
+    }
+  });
+  tl.appendChild(legend);
+
+  Object.keys(byDate).sort().forEach(date => {
+    const dayItems = byDate[date];
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'timeline-day';
+
+    // Day header
+    const header = document.createElement('div');
+    header.className = 'timeline-day-header';
+    header.textContent = DAY_NAMES[date] || date;
+    dayDiv.appendChild(header);
+
+    if (dayItems.length === 0) {
+      const emptyDay = document.createElement('div');
+      emptyDay.className = 'timeline-empty-day';
+      emptyDay.textContent = 'No sessions scheduled';
+      dayDiv.appendChild(emptyDay);
+      tl.appendChild(dayDiv);
+      return;
+    }
+
+    // Find time range and locations for this day
+    const locations = [...new Set(dayItems.map(d => d.location))].sort();
+    const times = dayItems.map(d => parseTime(d.time));
+    const minTime = Math.floor(Math.min(...times) / 30) * 30; // round down to 30min
+    const maxTime = Math.ceil((Math.max(...times) + SLOT_DURATION) / 30) * 30; // round up
+    const totalMinutes = maxTime - minTime;
+    const totalHeight = totalMinutes * PX_PER_MIN;
+
+    // Location headers
+    const locHeaders = document.createElement('div');
+    locHeaders.className = 'timeline-loc-headers';
+    // Spacer for time label column
+    const spacer = document.createElement('div');
+    spacer.className = 'timeline-loc-header';
+    spacer.style.minWidth = '65px';
+    spacer.style.maxWidth = '65px';
+    spacer.style.flex = 'none';
+    spacer.textContent = '';
+    locHeaders.appendChild(spacer);
+    locations.forEach(loc => {
+      const lh = document.createElement('div');
+      lh.className = 'timeline-loc-header';
+      lh.textContent = loc.replace(', Grainger Hall', '').replace(', LSRC', ' (LSRC)');
+      lh.title = loc;
+      locHeaders.appendChild(lh);
+    });
+    dayDiv.appendChild(locHeaders);
+
+    // Grid area: time labels + columns
+    const gridWrap = document.createElement('div');
+    gridWrap.style.display = 'flex';
+    gridWrap.style.position = 'relative';
+    gridWrap.style.height = totalHeight + 'px';
+
+    // Time labels
+    const timeLabels = document.createElement('div');
+    timeLabels.className = 'timeline-time-labels';
+    timeLabels.style.height = totalHeight + 'px';
+
+    for (let t = minTime; t <= maxTime; t += 30) {
+      const y = (t - minTime) * PX_PER_MIN;
+      const label = document.createElement('div');
+      label.className = 'timeline-time-label';
+      label.style.top = y + 'px';
+      let h = Math.floor(t / 60);
+      const m = t % 60;
+      const ap = h >= 12 ? 'PM' : 'AM';
+      if (h > 12) h -= 12;
+      if (h === 0) h = 12;
+      label.textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ap;
+      timeLabels.appendChild(label);
+
+      // Hour line across all columns
+      const line = document.createElement('div');
+      line.className = 'timeline-hour-line' + (m === 0 ? ' on-hour' : '');
+      line.style.position = 'absolute';
+      line.style.top = y + 'px';
+      line.style.left = '65px';
+      line.style.right = '0';
+      gridWrap.appendChild(line);
+    }
+    gridWrap.appendChild(timeLabels);
+
+    // Columns for each location
+    const colsWrap = document.createElement('div');
+    colsWrap.className = 'timeline-cols';
+    colsWrap.style.height = totalHeight + 'px';
+
+    locations.forEach(loc => {
+      const col = document.createElement('div');
+      col.className = 'timeline-col';
+
+      const locItems = dayItems.filter(d => d.location === loc);
+      locItems.forEach(item => {
+        const startMin = parseTime(item.time);
+        const top = (startMin - minTime) * PX_PER_MIN;
+        const height = SLOT_DURATION * PX_PER_MIN;
+
+        const block = document.createElement('div');
+        block.className = 'tl-block';
+        if (conflicts.has(item.id)) block.classList.add('has-conflict');
+
+        const bgColor = getProgramColor(item.program);
+        block.style.backgroundColor = bgColor + '20';
+        block.style.borderLeftColor = bgColor;
+        block.style.borderLeftWidth = '3px';
+        block.style.top = top + 'px';
+        block.style.height = height + 'px';
+        block.style.left = '3px';
+        block.style.right = '3px';
+
+        const title = document.createElement('div');
+        title.className = 'tl-block-title';
+        title.textContent = item.title;
+        title.style.color = bgColor;
+        block.appendChild(title);
+
+        const meta = document.createElement('div');
+        meta.className = 'tl-block-meta';
+        meta.textContent = item.time + ' \u00B7 ' + item.presenters;
+        block.appendChild(meta);
+
+        // Hover actions
+        const actions = document.createElement('div');
+        actions.className = 'tl-block-actions';
+
+        const btnRm = document.createElement('button');
+        btnRm.className = 'btn-remove';
+        btnRm.textContent = 'Remove';
+        btnRm.addEventListener('click', (e) => { e.stopPropagation(); mySchedule.delete(item.id); render(); });
+        actions.appendChild(btnRm);
+
+        if (item.abstract) {
+          const btnAbs = document.createElement('button');
+          btnAbs.className = 'btn-abstract';
+          btnAbs.textContent = 'Abstract';
+          btnAbs.addEventListener('click', (e) => { e.stopPropagation(); window.open(item.abstract, '_blank', 'noopener,noreferrer'); });
+          actions.appendChild(btnAbs);
+        }
+
+        const zoom = getZoomLink(item);
+        if (zoom) {
+          const btnZoom = document.createElement('button');
+          btnZoom.className = 'btn-zoom';
+          btnZoom.textContent = 'Zoom';
+          btnZoom.addEventListener('click', (e) => { e.stopPropagation(); window.open(zoom, '_blank', 'noopener,noreferrer'); });
+          actions.appendChild(btnZoom);
+        }
+
+        block.appendChild(actions);
+        col.appendChild(block);
+      });
+
+      colsWrap.appendChild(col);
+    });
+
+    gridWrap.appendChild(colsWrap);
+    dayDiv.appendChild(gridWrap);
+    tl.appendChild(dayDiv);
+  });
+}
+
 function render() {
   const filters = getActiveFilters();
   renderFilterTags();
@@ -629,12 +877,15 @@ function render() {
   const container = document.getElementById('cardContainer');
   while (container.firstChild) container.removeChild(container.firstChild);
 
+  const tlContainer = document.getElementById('timelineContainer');
+
   document.getElementById('scheduleCount').textContent = mySchedule.size;
   document.getElementById('resultCount').textContent =
     items.length + ' session' + (items.length !== 1 ? 's' : '') +
     (currentView === 'schedule' ? ' in your schedule' : ' found');
 
   if (items.length === 0) {
+    tlContainer.style.display = 'none';
     const empty = document.createElement('div');
     empty.className = 'empty';
     const p = document.createElement('p');
@@ -642,6 +893,13 @@ function render() {
     empty.appendChild(p);
     container.appendChild(empty);
     return;
+  }
+
+  // Show timeline only in schedule view
+  if (currentView === 'schedule') {
+    renderTimeline(items, conflicts);
+  } else {
+    tlContainer.style.display = 'none';
   }
 
   let lastDate = '';
