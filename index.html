@@ -162,8 +162,8 @@ a { color: var(--accent); }
     <div class="dropdown" id="calDropdown">
       <button class="btn btn-export" id="btnCalMenu">Export to Calendar &#9662;</button>
       <div class="dropdown-menu" id="calMenu">
-        <button id="btnOutlookWeb">Outlook (Web)</button>
-        <button id="btnGoogleCal">Google Calendar</button>
+        <button id="btnOutlookWeb">Import to Outlook</button>
+        <button id="btnGoogleCal">Import to Google Calendar</button>
         <button id="btnDownloadIcs">Download .ics file</button>
       </div>
     </div>
@@ -1032,50 +1032,37 @@ function toUtcString(dateStr, timeStr, durationMin) {
 }
 
 function exportOutlookWeb() {
-  const items = getExportItems(true);
-  if (items.length === 0) return;
-  if (items.length > 10) {
-    if (!confirm('You have ' + items.length + ' sessions. Outlook Web opens one tab per event. Continue?')) return;
-  }
-  items.forEach(d => {
-    const times = toUtcString(d.date, d.time, 25);
-    const zoom = getZoomLink(d);
-    const body = ['Presenters: ' + d.presenters, 'Advisor: ' + d.advisors,
-      d.abstract ? 'Abstract: ' + d.abstract : '', zoom ? 'Zoom: ' + zoom : ''].filter(Boolean).join('\n');
-    const params = new URLSearchParams({
-      rru: 'addevent',
-      subject: d.title,
-      startdt: times.start,
-      enddt: times.end,
-      location: d.location,
-      body: body,
-      allday: 'false',
-      path: '/calendar/action/compose'
-    });
-    window.open('https://outlook.live.com/calendar/0/action/compose?' + params.toString(), '_blank', 'noopener,noreferrer');
-  });
+  // Download .ics first, then open Outlook Web import page
+  exportIcs();
+  alert('Your .ics file is downloading.\n\nOutlook Web will open next — go to:\n"Add calendar" → "Upload from file" → select the downloaded .ics file.');
+  window.open('https://outlook.office.com/calendar', '_blank', 'noopener,noreferrer');
 }
 
 function exportGoogleCal() {
   const items = getExportItems(true);
   if (items.length === 0) return;
-  if (items.length > 10) {
-    if (!confirm('You have ' + items.length + ' sessions. Google Calendar opens one tab per event. Continue?')) return;
-  }
-  items.forEach(d => {
-    const times = toUtcString(d.date, d.time, 25);
-    const zoom = getZoomLink(d);
-    const details = ['Presenters: ' + d.presenters, 'Advisor: ' + d.advisors,
-      d.abstract ? 'Abstract: ' + d.abstract : '', zoom ? 'Zoom: ' + zoom : ''].filter(Boolean).join('\n');
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: d.title,
-      dates: times.start + '/' + times.end,
-      location: d.location,
-      details: details
+  if (items.length <= 5) {
+    // Few events: open Google Calendar directly for each
+    items.forEach(d => {
+      const times = toUtcString(d.date, d.time, 25);
+      const zoom = getZoomLink(d);
+      const details = ['Presenters: ' + d.presenters, 'Advisor: ' + d.advisors,
+        d.abstract ? 'Abstract: ' + d.abstract : '', zoom ? 'Zoom: ' + zoom : ''].filter(Boolean).join('\n');
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: d.title,
+        dates: times.start + '/' + times.end,
+        location: d.location,
+        details: details
+      });
+      window.open('https://calendar.google.com/calendar/render?' + params.toString(), '_blank', 'noopener,noreferrer');
     });
-    window.open('https://calendar.google.com/calendar/render?' + params.toString(), '_blank', 'noopener,noreferrer');
-  });
+  } else {
+    // Many events: download .ics and open Google Calendar import
+    exportIcs();
+    alert('Your .ics file is downloading.\n\nGoogle Calendar will open next — go to:\nSettings (gear icon) → "Import & Export" → "Import" → select the downloaded .ics file.');
+    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank', 'noopener,noreferrer');
+  }
 }
 
 function exportIcs() {
