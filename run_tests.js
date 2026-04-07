@@ -488,6 +488,196 @@ async function run() {
       await ctx.close();
     }
 
+    // ========================================
+    // TEST 15: Timeline view in My Schedule
+    // ========================================
+    console.log('\n15. Timeline View — Basic');
+    {
+      const ctx = await browser.newContext();
+      const page = await openPage(ctx);
+
+      // Timeline should be hidden in All view
+      let tlVisible = await page.evaluate(() =>
+        document.getElementById('timelineContainer').style.display !== 'none'
+      );
+      log('Timeline hidden in All view', !tlVisible, `Visible: ${tlVisible}`);
+
+      // Add sessions across multiple days and locations
+      // Session 1: Apr 7, Virtual
+      // Session 12: Apr 9, 9:05 AM, Field Auditorium
+      // Session 27: Apr 9, 9:05 AM, Room 2102 (conflict with 12)
+      // Session 80: Apr 10, 9:05 AM, Field Auditorium
+      await page.evaluate(() => {
+        document.querySelectorAll('.card-actions .btn-add').forEach((btn, i) => {
+          // Add specific sessions by clicking cards at indices 0, 11, 26, 79
+          // Easier: just click first few
+        });
+      });
+      // Add specific sessions via their add buttons (by finding them)
+      // Let's just add a few via clicking
+      for (let i = 0; i < 5; i++) {
+        await page.locator('.card-actions .btn-add').first().click();
+        await page.waitForTimeout(30);
+      }
+
+      // Switch to My Schedule
+      await page.click('#btnSchedule');
+      await page.waitForTimeout(100);
+
+      tlVisible = await page.evaluate(() =>
+        document.getElementById('timelineContainer').style.display !== 'none'
+      );
+      log('Timeline visible in Schedule view', tlVisible, `Visible: ${tlVisible}`);
+
+      const dayCount = await page.locator('.timeline-day').count();
+      log('Timeline shows day sections', dayCount >= 1, `Days: ${dayCount}`);
+
+      const blockCount = await page.locator('.tl-block').count();
+      log('Timeline has session blocks', blockCount === 5, `Blocks: ${blockCount}`);
+
+      const locHeaders = await page.locator('.timeline-loc-header').count();
+      log('Timeline shows location columns', locHeaders >= 2, `Location headers: ${locHeaders}`);
+
+      const legendItems = await page.locator('.timeline-legend-item').count();
+      log('Timeline shows legend', legendItems >= 1, `Legend items: ${legendItems}`);
+      await ctx.close();
+    }
+
+    // ========================================
+    // TEST 16: Timeline with conflicts
+    // ========================================
+    console.log('\n16. Timeline View — Conflicts');
+    {
+      const ctx = await browser.newContext();
+      const page = await openPage(ctx);
+
+      // Filter to 9:05 AM Apr 9 and add conflicting sessions
+      await page.selectOption('#filterDate', '2026-04-09');
+      await page.selectOption('#filterTime', '9:05 AM');
+      await page.waitForTimeout(100);
+
+      // Add all at 9:05 AM
+      const addCount = await page.locator('.card-actions .btn-add').count();
+      for (let i = 0; i < addCount; i++) {
+        await page.locator('.card-actions .btn-add').first().click();
+        await page.waitForTimeout(30);
+      }
+
+      // Clear filters and switch to schedule
+      await page.click('#btnClearFilters');
+      await page.waitForTimeout(50);
+      await page.click('#btnSchedule');
+      await page.waitForTimeout(100);
+
+      const conflictBlocks = await page.locator('.tl-block.has-conflict').count();
+      log('Timeline shows conflict markers', conflictBlocks >= 2, `Conflict blocks: ${conflictBlocks}`);
+
+      // Each conflict should be in its own column (different locations)
+      const colCount = await page.locator('.timeline-col').count();
+      log('Conflicts in separate columns', colCount >= 2, `Columns: ${colCount}`);
+      await ctx.close();
+    }
+
+    // ========================================
+    // TEST 17: Timeline — remove via hover action
+    // ========================================
+    console.log('\n17. Timeline View — Remove Action');
+    {
+      const ctx = await browser.newContext();
+      const page = await openPage(ctx);
+
+      await page.locator('.card-actions .btn-add').first().click();
+      await page.waitForTimeout(50);
+      await page.click('#btnSchedule');
+      await page.waitForTimeout(100);
+
+      let blockCount = await page.locator('.tl-block').count();
+      log('Timeline has 1 block initially', blockCount === 1, `Blocks: ${blockCount}`);
+
+      // Hover over block to show actions, then click Remove
+      await page.locator('.tl-block').first().hover();
+      await page.waitForTimeout(100);
+      await page.locator('.tl-block-actions .btn-remove').first().click();
+      await page.waitForTimeout(100);
+
+      const badge = await page.evaluate(() => document.getElementById('scheduleCount').textContent);
+      log('Session removed via timeline', badge === '0', `Badge: ${badge}`);
+      await ctx.close();
+    }
+
+    // ========================================
+    // TEST 18: Timeline persists after reload
+    // ========================================
+    console.log('\n18. Timeline View — Persistence');
+    {
+      const ctx = await browser.newContext();
+      const page = await openPage(ctx);
+
+      // Add sessions and switch to schedule view
+      for (let i = 0; i < 3; i++) {
+        await page.locator('.card-actions .btn-add').first().click();
+        await page.waitForTimeout(30);
+      }
+      await page.click('#btnSchedule');
+      await page.waitForTimeout(100);
+
+      let blockCount = await page.locator('.tl-block').count();
+      log('Timeline has blocks before reload', blockCount === 3, `Blocks: ${blockCount}`);
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.tl-block');
+
+      blockCount = await page.locator('.tl-block').count();
+      log('Timeline blocks persist after reload', blockCount === 3, `Blocks: ${blockCount}`);
+
+      const tlVisible = await page.evaluate(() =>
+        document.getElementById('timelineContainer').style.display !== 'none'
+      );
+      log('Timeline still visible after reload', tlVisible, `Visible: ${tlVisible}`);
+      await ctx.close();
+    }
+
+    // ========================================
+    // TEST 19: Timeline with multi-day schedule
+    // ========================================
+    console.log('\n19. Timeline View — Multi-day');
+    {
+      const ctx = await browser.newContext();
+      const page = await openPage(ctx);
+
+      // Add sessions from different days
+      // Add one from Apr 7 (first few are Apr 7)
+      await page.locator('.card-actions .btn-add').first().click();
+      await page.waitForTimeout(30);
+
+      // Filter to Apr 9 and add one
+      await page.selectOption('#filterDate', '2026-04-09');
+      await page.waitForTimeout(100);
+      await page.locator('.card-actions .btn-add').first().click();
+      await page.waitForTimeout(30);
+
+      // Filter to Apr 10 and add one
+      await page.selectOption('#filterDate', '2026-04-10');
+      await page.waitForTimeout(100);
+      await page.locator('.card-actions .btn-add').first().click();
+      await page.waitForTimeout(30);
+
+      // Clear filters, switch to schedule
+      await page.click('#btnClearFilters');
+      await page.waitForTimeout(50);
+      await page.click('#btnSchedule');
+      await page.waitForTimeout(100);
+
+      const dayCount = await page.locator('.timeline-day').count();
+      log('Shows 3 separate days', dayCount === 3, `Day sections: ${dayCount}`);
+
+      const headers = await page.locator('.timeline-day-header').allTextContents();
+      log('Days in chronological order',
+        headers[0].includes('Apr 7') && headers[1].includes('Apr 9') && headers[2].includes('Apr 10'),
+        `Headers: ${headers.join(', ')}`);
+      await ctx.close();
+    }
+
   } catch (err) {
     console.error('\n[ERROR]', err.message);
     failed++;
