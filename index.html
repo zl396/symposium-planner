@@ -29,6 +29,30 @@ a { color: var(--accent); }
 .toolbar .btn-export { background: var(--green); color: #fff; border-color: var(--green); }
 .toolbar .btn-export:hover { opacity: .9; }
 
+/* Concentration chips */
+.conc-filter-section { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: .75rem; }
+.conc-filter-block { }
+.conc-filter-block > label { display: flex; align-items: center; gap: .5rem; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .35rem; }
+.conc-clear { font-size: .7rem; color: var(--red); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+.conc-toggle { font-size: .7rem; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+.chip-container { display: flex; flex-wrap: wrap; gap: .3rem; max-height: 0; overflow: hidden; transition: max-height .25s ease; }
+.chip-container.open { max-height: 500px; }
+.chip-summary { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; min-height: 1.8rem; cursor: pointer; padding: .25rem 0; }
+.chip-summary-text { font-size: .82rem; color: var(--muted); }
+.chip-group-label { width: 100%; font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: .35rem; margin-bottom: .05rem; }
+.chip-group-label:first-child { margin-top: 0; }
+.conc-chip { display: inline-flex; align-items: center; padding: .2rem .5rem; border: 1.5px solid var(--border); border-radius: 20px; font-size: .75rem; cursor: pointer; transition: .15s; user-select: none; background: var(--card); color: var(--text); -webkit-tap-highlight-color: transparent; }
+.conc-chip:hover { border-color: var(--accent); background: var(--accent-light); }
+.conc-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.conc-chip .chip-abbr { font-weight: 600; }
+.conc-chip .chip-full { margin-left: .25rem; opacity: .7; font-size: .68rem; }
+.conc-chip-mini { display: inline-flex; padding: .15rem .45rem; border-radius: 12px; font-size: .72rem; font-weight: 600; background: var(--accent); color: #fff; }
+@media (max-width: 640px) {
+  .conc-filter-section { grid-template-columns: 1fr; }
+  .conc-chip .chip-full { display: none; }
+  .conc-chip { padding: .18rem .4rem; font-size: .72rem; }
+}
+
 /* Dropdown */
 .dropdown { position: relative; display: inline-block; }
 .dropdown-menu { display: none; position: absolute; top: 100%; left: 0; margin-top: .3rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,.12); z-index: 50; min-width: 200px; overflow: hidden; }
@@ -189,21 +213,23 @@ a { color: var(--accent); }
         <select id="filterLocation"><option value="">All Locations</option></select>
       </div>
     </div>
+    <div class="conc-filter-section">
+      <div class="conc-filter-block">
+        <label>Primary Concentration <button class="conc-toggle" data-target="filterPrimary">expand</button> <button class="conc-clear" data-target="primary">clear</button></label>
+        <div class="chip-summary" id="filterPrimarySummary" data-target="filterPrimary"><span class="chip-summary-text">All — click to select</span></div>
+        <div class="chip-container" id="filterPrimary"></div>
+      </div>
+      <div class="conc-filter-block">
+        <label>Secondary Concentration <button class="conc-toggle" data-target="filterSecondary">expand</button> <button class="conc-clear" data-target="secondary">clear</button></label>
+        <div class="chip-summary" id="filterSecondarySummary" data-target="filterSecondary"><span class="chip-summary-text">All — click to select</span></div>
+        <div class="chip-container" id="filterSecondary"></div>
+      </div>
+    </div>
     <div class="filter-row">
-      <div class="filter-group">
-        <label>Primary Concentration</label>
-        <select id="filterPrimary"><option value="">All</option></select>
-      </div>
-      <div class="filter-group">
-        <label>Secondary Concentration</label>
-        <select id="filterSecondary"><option value="">All</option></select>
-      </div>
       <div class="filter-group">
         <label>Advisor</label>
         <select id="filterAdvisor"><option value="">All Advisors</option></select>
       </div>
-    </div>
-    <div class="filter-row">
       <div class="filter-group">
         <label>Presenter</label>
         <select id="filterPresenter"><option value="">All Presenters</option></select>
@@ -397,8 +423,8 @@ function saveState() {
         date: document.getElementById('filterDate')?.value || '',
         time: document.getElementById('filterTime')?.value || '',
         location: document.getElementById('filterLocation')?.value || '',
-        primary: document.getElementById('filterPrimary')?.value || '',
-        secondary: document.getElementById('filterSecondary')?.value || '',
+        primary: [...document.querySelectorAll('#filterPrimary .conc-chip.selected')].map(c => c.dataset.code),
+        secondary: [...document.querySelectorAll('#filterSecondary .conc-chip.selected')].map(c => c.dataset.code),
         advisor: document.getElementById('filterAdvisor')?.value || '',
         presenter: document.getElementById('filterPresenter')?.value || '',
         keyword: document.getElementById('filterKeyword')?.value || ''
@@ -481,6 +507,22 @@ function sortKey(item) {
   return item.date + '-' + String(parseTime(item.time)).padStart(4,'0');
 }
 
+// ==================== CONCENTRATION DATA ====================
+const CONC_GROUPS = [
+  { label: 'MEM Concentrations', items: ['EE','EAM','BE','CEEJ','EEP','EEH','CaMS','TFE'] },
+  { label: 'Other Master\'s', items: ['DEL','iMEP','MF'] },
+  { label: 'Joint Degrees', items: ['MBA','MPP'] },
+  { label: 'Undergraduate', items: ['ENV','MARSCI','BIO','GWD'] }
+];
+const CONC_LABELS = {
+  EE:'Energy & Environment', EAM:'Env Analytics & Modeling', BE:'Business & Environment',
+  CEEJ:'Community & Env Justice', EEP:'Env Economics & Policy', EEH:'Ecotox & Env Health',
+  CaMS:'Coastal & Marine Systems', TFE:'Terrestrial & Freshwater',
+  DEL:'Duke Env Leadership (Online)', iMEP:'Int\'l Master of Env Policy', MF:'Master of Forestry',
+  MBA:'MBA (Fuqua)', MPP:'MPP (Sanford)',
+  ENV:'Env Sciences & Policy', MARSCI:'Marine Science & Conservation', BIO:'Biology', GWD:'Graduation w/ Distinction'
+};
+
 // ==================== POPULATE FILTERS ====================
 function populateFilters() {
   const dates = [...new Set(DATA.map(d => d.date))].sort();
@@ -500,36 +542,33 @@ function populateFilters() {
   const fLoc = document.getElementById('filterLocation');
   locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; fLoc.appendChild(o); });
 
-  // Concentration filters with optgroup
-  const CONC_GROUPS = [
-    { label: 'MEM Concentrations', items: ['EE','EAM','BE','CEEJ','EEP','EEH','CaMS','TFE'] },
-    { label: 'Other Master\'s', items: ['DEL','iMEP','MF'] },
-    { label: 'Joint Degrees', items: ['MBA','MPP'] },
-    { label: 'Undergraduate', items: ['ENV','MARSCI','BIO','GWD'] }
-  ];
-  const CONC_LABELS = {
-    EE:'Energy & Environment', EAM:'Env Analytics & Modeling', BE:'Business & Environment',
-    CEEJ:'Community & Env Justice', EEP:'Env Economics & Policy', EEH:'Ecotox & Env Health',
-    CaMS:'Coastal & Marine Systems', TFE:'Terrestrial & Freshwater',
-    DEL:'Duke Env Leadership (Online)', iMEP:'Int\'l Master of Env Policy', MF:'Master of Forestry',
-    MBA:'MBA (Fuqua)', MPP:'MPP (Sanford)',
-    ENV:'Env Sciences & Policy', MARSCI:'Marine Science & Conservation', BIO:'Biology', GWD:'Graduation w/ Distinction'
-  };
-  function populateConcentrationSelect(selectEl) {
+  // Concentration chip filters
+  function populateChipContainer(containerId) {
+    const container = document.getElementById(containerId);
     CONC_GROUPS.forEach(g => {
-      const og = document.createElement('optgroup');
-      og.label = g.label;
+      const lbl = document.createElement('div');
+      lbl.className = 'chip-group-label';
+      lbl.textContent = g.label;
+      container.appendChild(lbl);
       g.items.forEach(code => {
-        const o = document.createElement('option');
-        o.value = code;
-        o.textContent = code + ' — ' + (CONC_LABELS[code] || code);
-        og.appendChild(o);
+        const chip = document.createElement('span');
+        chip.className = 'conc-chip';
+        chip.dataset.code = code;
+        const abbr = document.createElement('span');
+        abbr.className = 'chip-abbr';
+        abbr.textContent = code;
+        chip.appendChild(abbr);
+        const full = document.createElement('span');
+        full.className = 'chip-full';
+        full.textContent = CONC_LABELS[code] || '';
+        chip.appendChild(full);
+        chip.addEventListener('click', () => { chip.classList.toggle('selected'); render(); });
+        container.appendChild(chip);
       });
-      selectEl.appendChild(og);
     });
   }
-  populateConcentrationSelect(document.getElementById('filterPrimary'));
-  populateConcentrationSelect(document.getElementById('filterSecondary'));
+  populateChipContainer('filterPrimary');
+  populateChipContainer('filterSecondary');
 
   const fAdv = document.getElementById('filterAdvisor');
   [...advisors].sort().forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; fAdv.appendChild(o); });
@@ -544,16 +583,16 @@ function getActiveFilters() {
   const date = document.getElementById('filterDate').value;
   const time = document.getElementById('filterTime').value;
   const loc = document.getElementById('filterLocation').value;
-  const primary = document.getElementById('filterPrimary').value;
-  const secondary = document.getElementById('filterSecondary').value;
+  const primary = [...document.querySelectorAll('#filterPrimary .conc-chip.selected')].map(c => c.dataset.code);
+  const secondary = [...document.querySelectorAll('#filterSecondary .conc-chip.selected')].map(c => c.dataset.code);
   const adv = document.getElementById('filterAdvisor').value;
   const pres = document.getElementById('filterPresenter').value;
   const kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
   if (date) f.date = date;
   if (time) f.time = time;
   if (loc) f.location = loc;
-  if (primary) f.primary = primary;
-  if (secondary) f.secondary = secondary;
+  if (primary.length) f.primary = primary;
+  if (secondary.length) f.secondary = secondary;
   if (adv) f.advisor = adv;
   if (pres) f.presenter = pres;
   if (kw) f.keyword = kw;
@@ -565,8 +604,6 @@ function matchesFilters(item, filters) {
   if (filters.time && item.time !== filters.time) return false;
   if (filters.location && item.location !== filters.location) return false;
   if (filters.primary || filters.secondary) {
-    // Each student's program is like "EE-EAM/MBA". Split by comma for multi-presenter.
-    // For each program entry, parse: parts[0]=primary, parts[1]=secondary (before /), after /=joint
     const progs = item.program.split(/,\s*/);
     const match = progs.some(p => {
       const clean = p.trim();
@@ -576,8 +613,10 @@ function matchesFilters(item, filters) {
       const pri = concParts[0] || '';
       const sec = concParts[1] || '';
       const all = [...concParts, ...jointParts];
-      if (filters.primary && pri !== filters.primary && !all.includes(filters.primary)) return false;
-      if (filters.secondary && sec !== filters.secondary && !all.includes(filters.secondary)) return false;
+      // primary filter: OR — match if any selected primary is found
+      if (filters.primary && !filters.primary.some(fp => pri === fp || all.includes(fp))) return false;
+      // secondary filter: OR — match if any selected secondary is found
+      if (filters.secondary && !filters.secondary.some(fs => sec === fs || all.includes(fs))) return false;
       return true;
     });
     if (!match) return false;
@@ -622,6 +661,24 @@ function renderFilterTags() {
   const labels = {date: 'Date', time: 'Time Slot', location: 'Location', primary: 'Primary', secondary: 'Secondary', advisor: 'Advisor', presenter: 'Presenter', keyword: 'Keyword'};
   const displayVal = {date: v => DAY_NAMES[v] || v};
   Object.entries(filters).forEach(([key, val]) => {
+    // For chip-based filters (arrays), show joined values
+    if (key === 'primary' || key === 'secondary') {
+      const tag = document.createElement('span');
+      tag.className = 'filter-tag';
+      const text = document.createElement('span');
+      text.textContent = labels[key] + ': ' + val.join(', ');
+      const btn = document.createElement('button');
+      btn.textContent = '\u00d7';
+      btn.addEventListener('click', () => {
+        const containerId = key === 'primary' ? 'filterPrimary' : 'filterSecondary';
+        document.querySelectorAll('#' + containerId + ' .conc-chip.selected').forEach(c => c.classList.remove('selected'));
+        render();
+      });
+      tag.appendChild(text);
+      tag.appendChild(btn);
+      container.appendChild(tag);
+      return;
+    }
     const tag = document.createElement('span');
     tag.className = 'filter-tag';
     const text = document.createElement('span');
@@ -941,10 +998,34 @@ function renderTimeline(items, conflicts) {
   });
 }
 
+function updateChipSummaries() {
+  ['filterPrimary','filterSecondary'].forEach(containerId => {
+    const summaryId = containerId + 'Summary';
+    const summary = document.getElementById(summaryId);
+    if (!summary) return;
+    while (summary.firstChild) summary.removeChild(summary.firstChild);
+    const selected = [...document.querySelectorAll('#' + containerId + ' .conc-chip.selected')];
+    if (selected.length === 0) {
+      const txt = document.createElement('span');
+      txt.className = 'chip-summary-text';
+      txt.textContent = 'All \u2014 click to select';
+      summary.appendChild(txt);
+    } else {
+      selected.forEach(chip => {
+        const mini = document.createElement('span');
+        mini.className = 'conc-chip-mini';
+        mini.textContent = chip.dataset.code;
+        summary.appendChild(mini);
+      });
+    }
+  });
+}
+
 function render(preserveScroll) {
   const scrollY = preserveScroll ? window.scrollY : 0;
   const filters = getActiveFilters();
   renderFilterTags();
+  updateChipSummaries();
   const conflicts = getConflicts();
 
   let items = currentView === 'schedule'
@@ -1189,8 +1270,14 @@ function init() {
     document.getElementById('filterDate').value = saved.filters.date || '';
     document.getElementById('filterTime').value = saved.filters.time || '';
     document.getElementById('filterLocation').value = saved.filters.location || '';
-    document.getElementById('filterPrimary').value = saved.filters.primary || '';
-    document.getElementById('filterSecondary').value = saved.filters.secondary || '';
+    (saved.filters.primary || []).forEach(code => {
+      const chip = document.querySelector('#filterPrimary .conc-chip[data-code="' + code + '"]');
+      if (chip) chip.classList.add('selected');
+    });
+    (saved.filters.secondary || []).forEach(code => {
+      const chip = document.querySelector('#filterSecondary .conc-chip[data-code="' + code + '"]');
+      if (chip) chip.classList.add('selected');
+    });
     document.getElementById('filterAdvisor').value = saved.filters.advisor || '';
     document.getElementById('filterPresenter').value = saved.filters.presenter || '';
     document.getElementById('filterKeyword').value = saved.filters.keyword || '';
@@ -1203,7 +1290,31 @@ function init() {
   }
 
   // Filter changes
-  ['filterDate','filterTime','filterLocation','filterPrimary','filterSecondary','filterAdvisor','filterPresenter'].forEach(id => {
+  // Concentration toggle and summary
+  function toggleChipContainer(containerId) {
+    document.getElementById(containerId).classList.toggle('open');
+    const btn = document.querySelector('.conc-toggle[data-target="' + containerId + '"]');
+    if (btn) btn.textContent = document.getElementById(containerId).classList.contains('open') ? 'collapse' : 'expand';
+  }
+  // Toggle on summary click
+  document.querySelectorAll('.chip-summary').forEach(s => {
+    s.addEventListener('click', () => toggleChipContainer(s.dataset.target));
+  });
+  document.querySelectorAll('.conc-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleChipContainer(btn.dataset.target));
+  });
+
+  // Concentration clear buttons
+  document.querySelectorAll('.conc-clear').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      const containerId = target === 'primary' ? 'filterPrimary' : 'filterSecondary';
+      document.querySelectorAll('#' + containerId + ' .conc-chip.selected').forEach(c => c.classList.remove('selected'));
+      render();
+    });
+  });
+
+  ['filterDate','filterTime','filterLocation','filterAdvisor','filterPresenter'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   let kwTimer;
@@ -1231,8 +1342,7 @@ function init() {
     document.getElementById('filterDate').value = '';
     document.getElementById('filterTime').value = '';
     document.getElementById('filterLocation').value = '';
-    document.getElementById('filterPrimary').value = '';
-    document.getElementById('filterSecondary').value = '';
+    document.querySelectorAll('#filterPrimary .conc-chip.selected, #filterSecondary .conc-chip.selected').forEach(c => c.classList.remove('selected'));
     document.getElementById('filterAdvisor').value = '';
     document.getElementById('filterPresenter').value = '';
     document.getElementById('filterKeyword').value = '';
