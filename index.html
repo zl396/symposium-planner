@@ -1086,13 +1086,16 @@ function exportCsv() {
   let label;
 
   if (mySchedule.size > 0 && currentView !== 'schedule') {
-    const choice = confirm('Export only your saved schedule?\n\nOK = My Schedule\nCancel = All filtered sessions');
-    if (choice) {
+    const choice = prompt('What would you like to export?\n\n1 = My Schedule (' + mySchedule.size + ' sessions)\n2 = All filtered sessions\n\nType 1 or 2 (or Cancel to abort):', '1');
+    if (choice === null) return;
+    if (choice.trim() === '1') {
       items = DATA.filter(d => mySchedule.has(d.id));
       label = 'my_schedule';
-    } else {
+    } else if (choice.trim() === '2') {
       items = DATA;
       label = 'all';
+    } else {
+      alert('Invalid choice. Please enter 1 or 2.'); return;
     }
   } else if (currentView === 'schedule') {
     items = DATA.filter(d => mySchedule.has(d.id));
