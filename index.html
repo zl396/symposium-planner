@@ -102,6 +102,23 @@ a { color: var(--accent); }
 .card-actions .btn-zoom:hover { background: #eff6ff; }
 .conflict-warn { display: inline-flex; align-items: center; gap: .25rem; background: #fef3c7; color: var(--orange); padding: .15rem .5rem; border-radius: 12px; font-size: .72rem; font-weight: 600; margin-top: .35rem; }
 
+/* Schedule Preview */
+.schedule-preview { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem; box-shadow: var(--shadow); overflow: hidden; }
+.preview-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem 1rem; cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--accent); user-select: none; -webkit-tap-highlight-color: transparent; }
+.preview-header:hover { background: var(--accent-light); }
+.preview-arrow { font-size: .7rem; transition: transform .2s; }
+.preview-arrow.open { transform: rotate(180deg); }
+.preview-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.preview-body.open { max-height: 600px; overflow-y: auto; }
+.preview-item { display: flex; gap: .6rem; align-items: flex-start; padding: .45rem 1rem; border-top: 1px solid var(--border); font-size: .78rem; }
+.preview-item:hover { background: #f9fafb; }
+.preview-item-time { min-width: 80px; color: var(--muted); white-space: nowrap; font-weight: 500; }
+.preview-item-title { flex: 1; font-weight: 500; line-height: 1.3; }
+.preview-item-loc { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+.preview-item-badge { display: inline-block; padding: .05rem .35rem; border-radius: 8px; font-size: .65rem; font-weight: 600; color: #fff; margin-left: .3rem; flex-shrink: 0; }
+.preview-empty { padding: .8rem 1rem; color: var(--muted); font-size: .82rem; text-align: center; border-top: 1px solid var(--border); }
+.preview-conflict { color: var(--orange); font-weight: 600; }
+
 /* Day separator */
 .day-separator { background: var(--accent); color: #fff; padding: .5rem 1rem; border-radius: var(--radius); font-weight: 600; font-size: .9rem; margin-top: .5rem; }
 
@@ -192,6 +209,14 @@ a { color: var(--accent); }
       </div>
     </div>
     <button class="btn btn-export" id="btnPrint">Print</button>
+  </div>
+
+  <div id="schedulePreview" class="schedule-preview" style="display:none;">
+    <div class="preview-header" id="previewToggle">
+      <span>📋 My Schedule Preview</span>
+      <span class="preview-arrow" id="previewArrow">▼</span>
+    </div>
+    <div class="preview-body" id="previewBody"></div>
   </div>
 
   <div class="filters">
@@ -1075,8 +1100,70 @@ function render(preserveScroll) {
     container.appendChild(createCard(item, conflicts));
   });
 
+  renderSchedulePreview();
   saveState();
   if (preserveScroll) requestAnimationFrame(() => window.scrollTo(0, scrollY));
+}
+
+// ==================== SCHEDULE PREVIEW ====================
+function renderSchedulePreview() {
+  const panel = document.getElementById('schedulePreview');
+  const body = document.getElementById('previewBody');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  // Only show preview in All Sessions view when schedule has items
+  if (currentView === 'schedule' || mySchedule.size === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+
+  const conflicts = getConflicts();
+  const items = DATA.filter(d => mySchedule.has(d.id));
+  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+  let lastDate = '';
+  items.forEach(d => {
+    if (d.date !== lastDate) {
+      lastDate = d.date;
+      const dayRow = document.createElement('div');
+      dayRow.className = 'preview-item';
+      dayRow.style.background = '#f1f5f9';
+      dayRow.style.fontWeight = '600';
+      dayRow.style.fontSize = '.75rem';
+      dayRow.style.color = 'var(--accent)';
+      dayRow.textContent = DAY_NAMES[d.date] || d.date;
+      body.appendChild(dayRow);
+    }
+    const row = document.createElement('div');
+    row.className = 'preview-item';
+    if (conflicts.has(d.id)) row.classList.add('preview-conflict');
+
+    const time = document.createElement('span');
+    time.className = 'preview-item-time';
+    time.textContent = (conflicts.has(d.id) ? '⚠ ' : '') + d.time;
+
+    const title = document.createElement('span');
+    title.className = 'preview-item-title';
+    // Truncate long titles
+    const shortTitle = d.title.length > 60 ? d.title.substring(0, 57) + '...' : d.title;
+    title.textContent = shortTitle;
+
+    const badge = document.createElement('span');
+    badge.className = 'preview-item-badge';
+    badge.style.backgroundColor = getProgramColor(d.program);
+    badge.textContent = d.program;
+
+    const loc = document.createElement('span');
+    loc.className = 'preview-item-loc';
+    loc.textContent = d.location;
+
+    row.appendChild(time);
+    row.appendChild(title);
+    row.appendChild(badge);
+    row.appendChild(loc);
+    body.appendChild(row);
+  });
 }
 
 // ==================== EXPORT ====================
@@ -1356,6 +1443,12 @@ function init() {
     document.getElementById('btnSchedule').classList.add('active');
     document.getElementById('btnAll').classList.remove('active');
     render();
+  });
+
+  // Schedule preview toggle
+  document.getElementById('previewToggle').addEventListener('click', () => {
+    document.getElementById('previewBody').classList.toggle('open');
+    document.getElementById('previewArrow').classList.toggle('open');
   });
 
   // Clear filters
