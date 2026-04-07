@@ -119,6 +119,10 @@ a { color: var(--accent); }
 .preview-empty { padding: .8rem 1rem; color: var(--muted); font-size: .82rem; text-align: center; border-top: 1px solid var(--border); }
 .preview-conflict { color: var(--orange); font-weight: 600; }
 
+/* Event cards */
+.event-card { background: #fffbeb; border: 1px dashed #f59e0b; }
+.event-card .card-title { color: #92400e; }
+
 /* Day separator */
 .day-separator { background: var(--accent); color: #fff; padding: .5rem 1rem; border-radius: var(--radius); font-weight: 600; font-size: .9rem; margin-top: .5rem; }
 
@@ -427,7 +431,14 @@ const DATA = [
   {id:124,date:"2026-04-10",time:"1:25 PM",location:"Room 1101, Grainger Hall",presenters:"Tianyue Wei, Cong Qiao",program:"iMEP",title:"MP Presentation",advisors:"Junjie Zhang",abstract:""},
   {id:125,date:"2026-04-10",time:"1:50 PM",location:"Room 1101, Grainger Hall",presenters:"Erchi Luo, Yihao Yu, Haochuan Zhan",program:"iMEP",title:"Tech-EVA: A Technology-Adjusted Valuation Model for the Solar Photovoltaic Industry",advisors:"Junjie Zhang",abstract:"https://duke.box.com/s/ls8j2n8ckuntt23cesufag80nm0gb4l7"},
   {id:126,date:"2026-04-10",time:"2:15 PM",location:"Room 1101, Grainger Hall",presenters:"Han Zhang",program:"iMEP",title:"Environmental Conflict, Citizen Perceptions, and Digital Narrative Dynamics: An LLM-assisted NLP Study of Lithium Mining Protests in Serbia",advisors:"Andrew Cheon, Jiahua Yue",abstract:"https://duke.box.com/s/c1hx71esb4tello8tnr6i40wbwwriyzk"},
-  {id:127,date:"2026-04-10",time:"2:40 PM",location:"Room 1101, Grainger Hall",presenters:"Bochao Zhang",program:"iMEP",title:"From Extraction to Equity: Institutional Learning and Justice in China's Resource-for-Infrastructure Deals",advisors:"Andrew Cheon",abstract:"https://duke.box.com/s/54ip0gtw457r190dkaxgklpsnenkgr8b"}
+  {id:127,date:"2026-04-10",time:"2:40 PM",location:"Room 1101, Grainger Hall",presenters:"Bochao Zhang",program:"iMEP",title:"From Extraction to Equity: Institutional Learning and Justice in China's Resource-for-Infrastructure Deals",advisors:"Andrew Cheon",abstract:"https://duke.box.com/s/54ip0gtw457r190dkaxgklpsnenkgr8b"},
+  // ---- SPECIAL EVENTS ----
+  {id:128,date:"2026-04-07",time:"7:20 PM",location:"Virtual (Zoom)",presenters:"Dean Lori Snyder Bennear",program:"EVENT",title:"Opening Remarks",advisors:"",abstract:"",isEvent:true},
+  {id:129,date:"2026-04-09",time:"11:35 AM",location:"Field Auditorium, Grainger Hall",presenters:"Dean Lori Snyder Bennear",program:"EVENT",title:"Dean's Remarks",advisors:"",abstract:"",isEvent:true},
+  {id:130,date:"2026-04-09",time:"12:00 PM",location:"Grainger Hall, 1st Floor",presenters:"",program:"EVENT",title:"Lunch Break (12:00–12:55 PM)",advisors:"",abstract:"",isEvent:true},
+  {id:131,date:"2026-04-10",time:"11:35 AM",location:"Field Auditorium, Grainger Hall",presenters:"Dean Lori Snyder Bennear",program:"EVENT",title:"Dean's Remarks",advisors:"",abstract:"",isEvent:true},
+  {id:132,date:"2026-04-10",time:"12:00 PM",location:"Grainger Hall, 1st Floor",presenters:"",program:"EVENT",title:"Lunch Break (12:00–12:55 PM)",advisors:"",abstract:"",isEvent:true},
+  {id:133,date:"2026-04-10",time:"3:00 PM",location:"Hug Commons, LSRC",presenters:"",program:"EVENT",title:"GWD Poster Session (3:00–4:00 PM)",advisors:"",abstract:"",isEvent:true}
 ];
 
 // ==================== APP STATE ====================
@@ -501,7 +512,7 @@ const PROGRAM_COLORS = {
   'DEL':'#7c3aed','EE':'#2563eb','EAM':'#0891b2','BE':'#059669','CEEJ':'#d97706',
   'EEP':'#dc2626','EEH':'#be185d','CaMS':'#0369a1','TFE':'#15803d','iMEP':'#9333ea',
   'GWD':'#64748b','MARSCI':'#0e7490','MBA':'#b45309','MF':'#166534','MPP':'#7e22ce',
-  'BIO':'#475569','ENV':'#4b5563'
+  'BIO':'#475569','ENV':'#4b5563','EVENT':'#f59e0b'
 };
 
 function getProgramColor(prog) {
@@ -554,9 +565,9 @@ function populateFilters() {
   const locations = [...new Set(DATA.map(d => d.location))].sort();
   const timeSlots = [...new Set(DATA.map(d => d.time))].sort((a, b) => parseTime(a) - parseTime(b));
   const advisors = new Set();
-  DATA.forEach(d => d.advisors.split(/,\s*/).forEach(a => { if (a.trim()) advisors.add(a.trim()); }));
+  DATA.filter(d => !d.isEvent).forEach(d => d.advisors.split(/,\s*/).forEach(a => { if (a.trim()) advisors.add(a.trim()); }));
   const presenters = new Set();
-  DATA.forEach(d => d.presenters.split(/,\s*/).forEach(p => { if (p.trim()) presenters.add(p.trim()); }));
+  DATA.filter(d => !d.isEvent).forEach(d => d.presenters.split(/,\s*/).forEach(p => { if (p.trim()) presenters.add(p.trim()); }));
 
   const fDate = document.getElementById('filterDate');
   dates.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = DAY_NAMES[d] || d; fDate.appendChild(o); });
@@ -628,7 +639,7 @@ function matchesFilters(item, filters) {
   if (filters.date && item.date !== filters.date) return false;
   if (filters.time && item.time !== filters.time) return false;
   if (filters.location && item.location !== filters.location) return false;
-  if (filters.primary || filters.secondary) {
+  if ((filters.primary || filters.secondary) && !item.isEvent) {
     const progs = item.program.split(/,\s*/);
     const match = progs.some(p => {
       const clean = p.trim();
@@ -646,11 +657,11 @@ function matchesFilters(item, filters) {
     });
     if (!match) return false;
   }
-  if (filters.advisor) {
+  if (filters.advisor && !item.isEvent) {
     const advs = item.advisors.split(/,\s*/);
     if (!advs.some(a => a.trim() === filters.advisor)) return false;
   }
-  if (filters.presenter) {
+  if (filters.presenter && !item.isEvent) {
     const pres = item.presenters.split(/,\s*/);
     if (!pres.some(p => p.trim() === filters.presenter)) return false;
   }
@@ -724,6 +735,7 @@ function renderFilterTags() {
 function createCard(item, conflicts) {
   const card = document.createElement('div');
   card.className = 'card';
+  if (item.isEvent) card.classList.add('event-card');
   if (mySchedule.has(item.id)) card.classList.add('in-schedule');
   if (conflicts.has(item.id)) card.classList.add('has-conflict');
 
@@ -758,8 +770,8 @@ function createCard(item, conflicts) {
 
   metaLeft.appendChild(meta);
   metaLeft.appendChild(title);
-  metaLeft.appendChild(presenters);
-  metaLeft.appendChild(advisor);
+  if (item.presenters) metaLeft.appendChild(presenters);
+  if (item.advisors) metaLeft.appendChild(advisor);
 
   // Program badge
   const badgeWrap = document.createElement('div');
