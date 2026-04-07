@@ -199,6 +199,12 @@ a { color: var(--accent); }
         <select id="filterAdvisor"><option value="">All Advisors</option></select>
       </div>
       <div class="filter-group">
+        <label>Presenter</label>
+        <select id="filterPresenter"><option value="">All Presenters</option></select>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
         <label>Keyword Search</label>
         <input type="text" id="filterKeyword" placeholder="Title, presenter, or keyword...">
       </div>
@@ -389,6 +395,7 @@ function saveState() {
         location: document.getElementById('filterLocation')?.value || '',
         program: document.getElementById('filterProgram')?.value || '',
         advisor: document.getElementById('filterAdvisor')?.value || '',
+        presenter: document.getElementById('filterPresenter')?.value || '',
         keyword: document.getElementById('filterKeyword')?.value || ''
       },
       scrollY: window.scrollY
@@ -478,6 +485,8 @@ function populateFilters() {
   DATA.forEach(d => d.program.split(/,\s*/).forEach(p => programs.add(p.trim())));
   const advisors = new Set();
   DATA.forEach(d => d.advisors.split(/,\s*/).forEach(a => { if (a.trim()) advisors.add(a.trim()); }));
+  const presenters = new Set();
+  DATA.forEach(d => d.presenters.split(/,\s*/).forEach(p => { if (p.trim()) presenters.add(p.trim()); }));
 
   const fDate = document.getElementById('filterDate');
   dates.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = DAY_NAMES[d] || d; fDate.appendChild(o); });
@@ -493,6 +502,9 @@ function populateFilters() {
 
   const fAdv = document.getElementById('filterAdvisor');
   [...advisors].sort().forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; fAdv.appendChild(o); });
+
+  const fPres = document.getElementById('filterPresenter');
+  [...presenters].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; fPres.appendChild(o); });
 }
 
 // ==================== FILTERING ====================
@@ -503,12 +515,14 @@ function getActiveFilters() {
   const loc = document.getElementById('filterLocation').value;
   const prog = document.getElementById('filterProgram').value;
   const adv = document.getElementById('filterAdvisor').value;
+  const pres = document.getElementById('filterPresenter').value;
   const kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
   if (date) f.date = date;
   if (time) f.time = time;
   if (loc) f.location = loc;
   if (prog) f.program = prog;
   if (adv) f.advisor = adv;
+  if (pres) f.presenter = pres;
   if (kw) f.keyword = kw;
   return f;
 }
@@ -524,6 +538,10 @@ function matchesFilters(item, filters) {
   if (filters.advisor) {
     const advs = item.advisors.split(/,\s*/);
     if (!advs.some(a => a.trim() === filters.advisor)) return false;
+  }
+  if (filters.presenter) {
+    const pres = item.presenters.split(/,\s*/);
+    if (!pres.some(p => p.trim() === filters.presenter)) return false;
   }
   if (filters.keyword) {
     const hay = (item.title + ' ' + item.presenters + ' ' + item.advisors + ' ' + item.program).toLowerCase();
@@ -554,7 +572,7 @@ function renderFilterTags() {
   const container = document.getElementById('filterTags');
   while (container.firstChild) container.removeChild(container.firstChild);
   const filters = getActiveFilters();
-  const labels = {date: 'Date', time: 'Time Slot', location: 'Location', program: 'Program', advisor: 'Advisor', keyword: 'Keyword'};
+  const labels = {date: 'Date', time: 'Time Slot', location: 'Location', program: 'Program', advisor: 'Advisor', presenter: 'Presenter', keyword: 'Keyword'};
   const displayVal = {date: v => DAY_NAMES[v] || v};
   Object.entries(filters).forEach(([key, val]) => {
     const tag = document.createElement('span');
@@ -1126,6 +1144,7 @@ function init() {
     document.getElementById('filterLocation').value = saved.filters.location || '';
     document.getElementById('filterProgram').value = saved.filters.program || '';
     document.getElementById('filterAdvisor').value = saved.filters.advisor || '';
+    document.getElementById('filterPresenter').value = saved.filters.presenter || '';
     document.getElementById('filterKeyword').value = saved.filters.keyword || '';
   }
 
@@ -1136,7 +1155,7 @@ function init() {
   }
 
   // Filter changes
-  ['filterDate','filterTime','filterLocation','filterProgram','filterAdvisor'].forEach(id => {
+  ['filterDate','filterTime','filterLocation','filterProgram','filterAdvisor','filterPresenter'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   let kwTimer;
@@ -1166,6 +1185,7 @@ function init() {
     document.getElementById('filterLocation').value = '';
     document.getElementById('filterProgram').value = '';
     document.getElementById('filterAdvisor').value = '';
+    document.getElementById('filterPresenter').value = '';
     document.getElementById('filterKeyword').value = '';
     render();
   });
