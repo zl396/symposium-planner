@@ -191,19 +191,23 @@ a { color: var(--accent); }
     </div>
     <div class="filter-row">
       <div class="filter-group">
-        <label>Program</label>
-        <select id="filterProgram"><option value="">All Programs</option></select>
+        <label>Primary Concentration</label>
+        <select id="filterPrimary"><option value="">All</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Secondary Concentration</label>
+        <select id="filterSecondary"><option value="">All</option></select>
       </div>
       <div class="filter-group">
         <label>Advisor</label>
         <select id="filterAdvisor"><option value="">All Advisors</option></select>
       </div>
+    </div>
+    <div class="filter-row">
       <div class="filter-group">
         <label>Presenter</label>
         <select id="filterPresenter"><option value="">All Presenters</option></select>
       </div>
-    </div>
-    <div class="filter-row">
       <div class="filter-group">
         <label>Keyword Search</label>
         <input type="text" id="filterKeyword" placeholder="Title, presenter, or keyword...">
@@ -393,7 +397,8 @@ function saveState() {
         date: document.getElementById('filterDate')?.value || '',
         time: document.getElementById('filterTime')?.value || '',
         location: document.getElementById('filterLocation')?.value || '',
-        program: document.getElementById('filterProgram')?.value || '',
+        primary: document.getElementById('filterPrimary')?.value || '',
+        secondary: document.getElementById('filterSecondary')?.value || '',
         advisor: document.getElementById('filterAdvisor')?.value || '',
         presenter: document.getElementById('filterPresenter')?.value || '',
         keyword: document.getElementById('filterKeyword')?.value || ''
@@ -481,8 +486,6 @@ function populateFilters() {
   const dates = [...new Set(DATA.map(d => d.date))].sort();
   const locations = [...new Set(DATA.map(d => d.location))].sort();
   const timeSlots = [...new Set(DATA.map(d => d.time))].sort((a, b) => parseTime(a) - parseTime(b));
-  const programs = new Set();
-  DATA.forEach(d => d.program.split(/,\s*/).forEach(p => programs.add(p.trim())));
   const advisors = new Set();
   DATA.forEach(d => d.advisors.split(/,\s*/).forEach(a => { if (a.trim()) advisors.add(a.trim()); }));
   const presenters = new Set();
@@ -497,8 +500,36 @@ function populateFilters() {
   const fLoc = document.getElementById('filterLocation');
   locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; fLoc.appendChild(o); });
 
-  const fProg = document.getElementById('filterProgram');
-  [...programs].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; fProg.appendChild(o); });
+  // Concentration filters with optgroup
+  const CONC_GROUPS = [
+    { label: 'MEM Concentrations', items: ['EE','EAM','BE','CEEJ','EEP','EEH','CaMS','TFE'] },
+    { label: 'Other Master\'s', items: ['DEL','iMEP','MF'] },
+    { label: 'Joint Degrees', items: ['MBA','MPP'] },
+    { label: 'Undergraduate', items: ['ENV','MARSCI','BIO','GWD'] }
+  ];
+  const CONC_LABELS = {
+    EE:'Energy & Environment', EAM:'Env Analytics & Modeling', BE:'Business & Environment',
+    CEEJ:'Community & Env Justice', EEP:'Env Economics & Policy', EEH:'Ecotox & Env Health',
+    CaMS:'Coastal & Marine Systems', TFE:'Terrestrial & Freshwater',
+    DEL:'Duke Env Leadership (Online)', iMEP:'Int\'l Master of Env Policy', MF:'Master of Forestry',
+    MBA:'MBA (Fuqua)', MPP:'MPP (Sanford)',
+    ENV:'Env Sciences & Policy', MARSCI:'Marine Science & Conservation', BIO:'Biology', GWD:'Graduation w/ Distinction'
+  };
+  function populateConcentrationSelect(selectEl) {
+    CONC_GROUPS.forEach(g => {
+      const og = document.createElement('optgroup');
+      og.label = g.label;
+      g.items.forEach(code => {
+        const o = document.createElement('option');
+        o.value = code;
+        o.textContent = code + ' — ' + (CONC_LABELS[code] || code);
+        og.appendChild(o);
+      });
+      selectEl.appendChild(og);
+    });
+  }
+  populateConcentrationSelect(document.getElementById('filterPrimary'));
+  populateConcentrationSelect(document.getElementById('filterSecondary'));
 
   const fAdv = document.getElementById('filterAdvisor');
   [...advisors].sort().forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; fAdv.appendChild(o); });
@@ -513,14 +544,16 @@ function getActiveFilters() {
   const date = document.getElementById('filterDate').value;
   const time = document.getElementById('filterTime').value;
   const loc = document.getElementById('filterLocation').value;
-  const prog = document.getElementById('filterProgram').value;
+  const primary = document.getElementById('filterPrimary').value;
+  const secondary = document.getElementById('filterSecondary').value;
   const adv = document.getElementById('filterAdvisor').value;
   const pres = document.getElementById('filterPresenter').value;
   const kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
   if (date) f.date = date;
   if (time) f.time = time;
   if (loc) f.location = loc;
-  if (prog) f.program = prog;
+  if (primary) f.primary = primary;
+  if (secondary) f.secondary = secondary;
   if (adv) f.advisor = adv;
   if (pres) f.presenter = pres;
   if (kw) f.keyword = kw;
@@ -531,9 +564,23 @@ function matchesFilters(item, filters) {
   if (filters.date && item.date !== filters.date) return false;
   if (filters.time && item.time !== filters.time) return false;
   if (filters.location && item.location !== filters.location) return false;
-  if (filters.program) {
+  if (filters.primary || filters.secondary) {
+    // Each student's program is like "EE-EAM/MBA". Split by comma for multi-presenter.
+    // For each program entry, parse: parts[0]=primary, parts[1]=secondary (before /), after /=joint
     const progs = item.program.split(/,\s*/);
-    if (!progs.some(p => p.trim().includes(filters.program))) return false;
+    const match = progs.some(p => {
+      const clean = p.trim();
+      const slashParts = clean.split('/');
+      const concParts = slashParts[0].split('-');
+      const jointParts = slashParts.slice(1);
+      const pri = concParts[0] || '';
+      const sec = concParts[1] || '';
+      const all = [...concParts, ...jointParts];
+      if (filters.primary && pri !== filters.primary && !all.includes(filters.primary)) return false;
+      if (filters.secondary && sec !== filters.secondary && !all.includes(filters.secondary)) return false;
+      return true;
+    });
+    if (!match) return false;
   }
   if (filters.advisor) {
     const advs = item.advisors.split(/,\s*/);
@@ -572,7 +619,7 @@ function renderFilterTags() {
   const container = document.getElementById('filterTags');
   while (container.firstChild) container.removeChild(container.firstChild);
   const filters = getActiveFilters();
-  const labels = {date: 'Date', time: 'Time Slot', location: 'Location', program: 'Program', advisor: 'Advisor', presenter: 'Presenter', keyword: 'Keyword'};
+  const labels = {date: 'Date', time: 'Time Slot', location: 'Location', primary: 'Primary', secondary: 'Secondary', advisor: 'Advisor', presenter: 'Presenter', keyword: 'Keyword'};
   const displayVal = {date: v => DAY_NAMES[v] || v};
   Object.entries(filters).forEach(([key, val]) => {
     const tag = document.createElement('span');
@@ -1142,7 +1189,8 @@ function init() {
     document.getElementById('filterDate').value = saved.filters.date || '';
     document.getElementById('filterTime').value = saved.filters.time || '';
     document.getElementById('filterLocation').value = saved.filters.location || '';
-    document.getElementById('filterProgram').value = saved.filters.program || '';
+    document.getElementById('filterPrimary').value = saved.filters.primary || '';
+    document.getElementById('filterSecondary').value = saved.filters.secondary || '';
     document.getElementById('filterAdvisor').value = saved.filters.advisor || '';
     document.getElementById('filterPresenter').value = saved.filters.presenter || '';
     document.getElementById('filterKeyword').value = saved.filters.keyword || '';
@@ -1155,7 +1203,7 @@ function init() {
   }
 
   // Filter changes
-  ['filterDate','filterTime','filterLocation','filterProgram','filterAdvisor','filterPresenter'].forEach(id => {
+  ['filterDate','filterTime','filterLocation','filterPrimary','filterSecondary','filterAdvisor','filterPresenter'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   let kwTimer;
@@ -1183,7 +1231,8 @@ function init() {
     document.getElementById('filterDate').value = '';
     document.getElementById('filterTime').value = '';
     document.getElementById('filterLocation').value = '';
-    document.getElementById('filterProgram').value = '';
+    document.getElementById('filterPrimary').value = '';
+    document.getElementById('filterSecondary').value = '';
     document.getElementById('filterAdvisor').value = '';
     document.getElementById('filterPresenter').value = '';
     document.getElementById('filterKeyword').value = '';
