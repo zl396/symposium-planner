@@ -993,11 +993,18 @@ function escIcsText(s) {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
-function getExportItems() {
+function getExportItems(calendarMode) {
   const filters = getActiveFilters();
-  let items = currentView === 'schedule'
-    ? DATA.filter(d => mySchedule.has(d.id))
-    : DATA;
+  let items;
+  if (calendarMode) {
+    // Calendar exports always use My Schedule
+    if (mySchedule.size === 0) { alert('Your schedule is empty. Please add sessions first.'); return []; }
+    items = DATA.filter(d => mySchedule.has(d.id));
+  } else {
+    items = currentView === 'schedule'
+      ? DATA.filter(d => mySchedule.has(d.id))
+      : DATA;
+  }
   items = items.filter(d => matchesFilters(d, filters));
   items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
   return items;
@@ -1025,8 +1032,8 @@ function toUtcString(dateStr, timeStr, durationMin) {
 }
 
 function exportOutlookWeb() {
-  const items = getExportItems();
-  if (items.length === 0) { alert('No sessions to export.'); return; }
+  const items = getExportItems(true);
+  if (items.length === 0) return;
   if (items.length > 10) {
     if (!confirm('You have ' + items.length + ' sessions. Outlook Web opens one tab per event. Continue?')) return;
   }
@@ -1050,8 +1057,8 @@ function exportOutlookWeb() {
 }
 
 function exportGoogleCal() {
-  const items = getExportItems();
-  if (items.length === 0) { alert('No sessions to export.'); return; }
+  const items = getExportItems(true);
+  if (items.length === 0) return;
   if (items.length > 10) {
     if (!confirm('You have ' + items.length + ' sessions. Google Calendar opens one tab per event. Continue?')) return;
   }
@@ -1072,14 +1079,8 @@ function exportGoogleCal() {
 }
 
 function exportIcs() {
-  const filters = getActiveFilters();
-  let items = currentView === 'schedule'
-    ? DATA.filter(d => mySchedule.has(d.id))
-    : DATA;
-  items = items.filter(d => matchesFilters(d, filters));
-  items.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
-
-  if (items.length === 0) { alert('No sessions to export.'); return; }
+  const items = getExportItems(true);
+  if (items.length === 0) return;
 
   const lines = [
     'BEGIN:VCALENDAR',
