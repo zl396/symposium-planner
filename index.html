@@ -1298,8 +1298,10 @@ function toUtcString(dateStr, timeStr, durationMin) {
 }
 
 function exportOutlookWeb() {
-  // Download .ics first, then open Outlook Web import page
-  exportIcs();
+  const items = getExportItems(true);
+  if (items.length === 0) return;
+  if (!confirm('You are about to export ' + items.length + ' session' + (items.length !== 1 ? 's' : '') + ' from your schedule to Outlook.\n\nProceed?')) return;
+  exportIcs(true);
   alert('Your .ics file is downloading.\n\nOutlook Web will open next — go to:\n"Add calendar" → "Upload from file" → select the downloaded .ics file.');
   window.open('https://outlook.office.com/calendar', '_blank', 'noopener,noreferrer');
 }
@@ -1307,6 +1309,7 @@ function exportOutlookWeb() {
 function exportGoogleCal() {
   const items = getExportItems(true);
   if (items.length === 0) return;
+  if (!confirm('You are about to export ' + items.length + ' session' + (items.length !== 1 ? 's' : '') + ' from your schedule to Google Calendar.\n\nProceed?')) return;
   if (items.length <= 5) {
     // Few events: open Google Calendar directly for each
     items.forEach(d => {
@@ -1325,15 +1328,16 @@ function exportGoogleCal() {
     });
   } else {
     // Many events: download .ics and open Google Calendar import
-    exportIcs();
+    exportIcs(true);
     alert('Your .ics file is downloading.\n\nGoogle Calendar will open next — go to:\nSettings (gear icon) → "Import & Export" → "Import" → select the downloaded .ics file.');
     window.open('https://calendar.google.com/calendar/r/settings/export', '_blank', 'noopener,noreferrer');
   }
 }
 
-function exportIcs() {
+function exportIcs(skipConfirm) {
   const items = getExportItems(true);
   if (items.length === 0) return;
+  if (!skipConfirm && !confirm('You are about to export ' + items.length + ' session' + (items.length !== 1 ? 's' : '') + ' from your schedule.\n\nProceed?')) return;
 
   const lines = [
     'BEGIN:VCALENDAR',
